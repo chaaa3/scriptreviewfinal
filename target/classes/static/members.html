@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Membres - Acme Co</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background-color: white;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            padding-left: 2.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: white;
+        }
+
+        .search-bar::before {
+            content: "🔍";
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .create-button {
+            background-color: #00d68f;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+        }
+
+        .create-button:hover {
+            background-color: #00bf80;
+        }
+
+        .members-table {
+            width: 100%;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+
+        .members-table th,
+        .members-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .members-table th {
+            font-weight: 500;
+            color: #666;
+            background-color: #f8f9fa;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background-color: #f0f0f0;
+            color: #666;
+        }
+
+        .edit-button {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .edit-button:hover {
+            color: #333;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="#" class="logo">Acme Co</a>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Docs</a>
+            <a href="#">API Reference</a>
+            <a href="#">Examples</a>
+            <a href="#">Playground</a>
+            <a href="#">?</a>
+            <div class="user-avatar">👤</div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Members</h1>
+            <div class="search-bar">
+                <input type="text" placeholder="Search members...">
+            </div>
+            <button class="create-button">Create New User</button>
+        </div>
+
+        <table class="members-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>John Doe</td>
+                    <td>john.doe@example.com</td>
+                    <td><span class="role-badge">Manager</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Jane Smith</td>
+                    <td>jane.smith@example.com</td>
+                    <td><span class="role-badge">Reviewer</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Samantha Johnson</td>
+                    <td>samantha.johnson@example.com</td>
+                    <td><span class="role-badge">Author</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Michael Brown</td>
+                    <td>michael.brown@example.com</td>
+                    <td><span class="role-badge">Author</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Emily Davis</td>
+                    <td>emily.davis@example.com</td>
+                    <td><span class="role-badge">Reviewer</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Robert Wilson</td>
+                    <td>robert.wilson@example.com</td>
+                    <td><span class="role-badge">Manager</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>Ava Lee</td>
+                    <td>ava.lee@example.com</td>
+                    <td><span class="role-badge">Author</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+                <tr>
+                    <td>David Miller</td>
+                    <td>david.miller@example.com</td>
+                    <td><span class="role-badge">Manager</span></td>
+                    <td><a href="#" class="edit-button">Edit Role</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html> 

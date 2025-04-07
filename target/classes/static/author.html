@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auteur - Test Script Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stomp-websocket@2.3.4-next/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Style de notification amélioré */
+        .notification-container { position: relative; }
+        .notification-counter {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .notification-bell {
+            font-size: 28px;
+            cursor: pointer;
+            margin-right: 15px;
+            transition: transform 0.3s;
+        }
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+        .notification-panel {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: -10px;
+            width: 350px;
+            max-height: 450px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .notification-panel-header {
+            background-color: #f8f8f8;
+            padding: 12px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            border-radius: 8px 8px 0 0;
+        }
+        .notification {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+        .notification:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        .notification:hover {
+            background-color: #f5f5f5;
+        }
+        .notification.unread {
+            background-color: #e6f3ff;
+        }
+        .notification.unread:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #1877f2;
+        }
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1877f2;
+        }
+        .notification-message {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .notification-time {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .notification-badge {
+            display: inline-block;
+            background-color: #1877f2;
+            color: white;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 350px;
+        }
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 10px;
+            overflow: hidden;
+            transform: translateX(120%);
+            transition: transform 0.3s ease-out;
+            border-left: 4px solid #1877f2;
+        }
+        .toast.visible {
+            transform: translateX(0);
+        }
+        .toast.hiding {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        
+        /* Styles des notifications de commentaires par type */
+        .toast-reviewer {
+            border-left: 4px solid #ff3b30; /* Rouge pour les commentaires des reviewers */
+            animation: highlight-red 2s;
+        }
+        @keyframes highlight-red {
+            0% { box-shadow: 0 0 20px rgba(255, 59, 48, 0.7); }
+            70% { box-shadow: 0 0 10px rgba(255, 59, 48, 0.4); }
+            100% { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+        }
+        .toast-facebook {
+            display: flex;
+            padding: 12px;
+        }
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .profile-pic.reviewer {
+            background-color: #ff3b30; /* Rouge pour les reviewers */
+        }
+        .toast-content-fb {
+            flex-grow: 1;
+        }
+        .sender-name {
+            font-weight: bold;
+            color: #1c1e21;
+            margin-bottom: 4px;
+        }
+        .toast-message {
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .comment-preview {
+            background-color: #f0f2f5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin: 6px 0;
+            color: #333;
+            position: relative;
+            border-left: 3px solid #ddd;
+        }
+        
+        /* Autres styles */
+        h1, h3 { color: #333; }
+        .comment { 
+            border-bottom: 1px solid #eee; 
+            padding: 15px 0;
+        }
+        .comment-author { 
+            font-weight: bold; 
+            color: #0d6efd; 
+            margin-bottom: 5px;
+        }
+        .comment-time { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+            margin-top: 5px;
+        }
+        textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        button { 
+            padding: 10px 20px; 
+            background-color: #0d6efd; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0b5ed7;
+        }
+        .tab { 
+            margin-right: 20px; 
+            display: inline-block; 
+            padding: 10px; 
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab:hover {
+            color: #0d6efd;
+        }
+        .active-tab { 
+            font-weight: bold; 
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+        }
+        input[type=text], input[type=number] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vue Auteur - Test Script Review</h1>
+        
+        <div class="card">
+            <h3>Connexion</h3>
+            <input type="text" id="token" placeholder="Token JWT" style="width: 70%; padding: 8px;">
+            <input type="text" id="scriptId" placeholder="ID du script" style="width: 20%; padding: 8px;">
+            <button id="connect">Se connecter</button>
+        </div>
+        
+        <div class="card">
+            <div class="header-actions">
+                <h3>Notifications</h3>
+                <div class="notification-container">
+                    <span class="notification-bell" id="notificationBell">🔔</span>
+                    <span class="notification-counter" id="notificationCounter">0</span>
+                    <div class="notification-panel" id="notificationPanel">
+                        <div class="notification-panel-header">Notifications</div>
+                        <div id="notificationsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div>
+                <span class="tab active-tab" id="tab-all">Tous les commentaires</span>
+                <span class="tab" id="tab-author">Mes commentaires</span>
+                <span class="tab" id="tab-reviewers">Commentaires des reviewers</span>
+            </div>
+            <div id="comments" style="margin-top: 15px;"></div>
+        </div>
+        
+        <div class="card">
+            <h3>Ajouter un commentaire</h3>
+            <textarea id="commentText" rows="4" placeholder="Votre commentaire..."></textarea>
+            <input type="number" id="lineNumber" placeholder="Numéro de ligne (optionnel)">
+            <button id="sendComment">Envoyer</button>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let stompClient = null;
+        let token = '';
+        let currentScriptId = '';
+        let commentsList = [];
+        let unreadNotifications = 0;
+        let notifications = [];
+        
+        document.getElementById('connect').addEventListener('click', function() {
+            token = document.getElementById('token').value;
+            currentScriptId = document.getElementById('scriptId').value;
+            
+            if (!token || !currentScriptId) {
+                alert('Veuillez entrer un token JWT et un ID de script');
+                return;
+            }
+            
+            connect();
+        });
+        
+        document.getElementById('sendComment').addEventListener('click', function() {
+            sendComment();
+        });
+        
+        document.getElementById('tab-all').addEventListener('click', function() {
+            setActiveTab('tab-all');
+            displayComments('all');
+        });
+        
+        document.getElementById('tab-author').addEventListener('click', function() {
+            setActiveTab('tab-author');
+            displayComments('author');
+        });
+        
+        document.getElementById('tab-reviewers').addEventListener('click', function() {
+            setActiveTab('tab-reviewers');
+            displayComments('reviewers');
+        });
+        
+        document.getElementById('notificationBell').addEventListener('click', function() {
+            toggleNotificationPanel();
+        });
+        
+        // Fermer le panneau de notification en cliquant ailleurs
+        document.addEventListener('click', function(event) {
+            const notificationPanel = document.getElementById('notificationPanel');
+            const notificationBell = document.getElementById('notificationBell');
+            
+            if (event.target !== notificationBell && event.target !== notificationPanel && !notificationPanel.contains(event.target)) {
+                notificationPanel.style.display = 'none';
+            }
+        });
+        
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notificationPanel');
+            
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                markNotificationsAsRead();
+            }
+        }
+        
+        function markNotificationsAsRead() {
+            unreadNotifications = 0;
+            updateNotificationCounter();
+            
+            // Marquer toutes les notifications comme lues
+            const notificationElements = document.querySelectorAll('.notification.unread');
+            notificationElements.forEach(element => {
+                element.classList.remove('unread');
+            });
+        }
+        
+        function setActiveTab(tabId) {
+            document.getElementById('tab-all').classList.remove('active-tab');
+            document.getElementById('tab-author').classList.remove('active-tab');
+            document.getElementById('tab-reviewers').classList.remove('active-tab');
+            document.getElementById(tabId).classList.add('active-tab');
+        }
+        
+        function connect() {
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+            
+            stompClient.connect(headers, function(frame) {
+                console.log('Connecté: ' + frame);
+                
+                // S'abonner aux notifications personnelles
+                stompClient.subscribe('/user/queue/notifications', function(notification) {
+                    const notificationData = JSON.parse(notification.body);
+                    console.log("Notification personnelle reçue:", notificationData);
+                    addNotification(notificationData);
+                    showToastNotification(notificationData);
+                });
+                
+                // S'abonner aux commentaires du script si on a un script actif
+                if (currentScriptId) {
+                    stompClient.subscribe(`/topic/script.${currentScriptId}.comments`, function(commentMessage) {
+                        const comment = JSON.parse(commentMessage.body);
+                        console.log("Nouveau commentaire reçu via WebSocket:", comment);
+                        addCommentToUI(comment);
+                        if (comment.user.id !== currentUserId) {
+                            showCommentNotification(comment);
+                        }
+                    });
+                    
+                    // S'abonner aux notifications de changement de statut du script
+                    stompClient.subscribe(`/topic/script.${currentScriptId}.status`, function(statusMessage) {
+                        const statusNotification = JSON.parse(statusMessage.body);
+                        console.log("Changement de statut reçu via WebSocket:", statusNotification);
+                        // Mettre à jour l'UI pour refléter le nouveau statut
+                        fetchAndDisplayScript(currentScriptId);
+                        // Afficher une notification pour informer l'utilisateur
+                        showStatusChangeNotification(statusNotification);
+                    });
+                }
+                
+                // Charger les commentaires existants
+                loadExistingComments();
+                
+                showToastNotification({
+                    type: "SUCCESS",
+                    message: "Connecté avec succès au serveur WebSocket"
+                });
+            }, function(error) {
+                console.error('Erreur de connexion:', error);
+                alert('Erreur de connexion: ' + error);
+            });
+        }
+        
+        function loadExistingComments() {
+            fetch(`http://localhost:8080/api/comments/script/${currentScriptId}/history`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Fusionner tous les commentaires dans une seule liste
+                commentsList = [];
+                
+                // Ajouter les commentaires de l'auteur
+                if (data.authorComments) {
+                    data.authorComments.forEach(comment => {
+                        comment.isAuthor = true;
+                        commentsList.push(comment);
+                    });
+                }
+                
+                // Ajouter les commentaires des reviewers
+                if (data.reviewerComments) {
+                    Object.values(data.reviewerComments).forEach(commentsArray => {
+                        commentsArray.forEach(comment => {
+                            comment.isAuthor = false;
+                            commentsList.push(comment);
+                        });
+                    });
+                }
+                
+                // Trier par date de création (du plus récent au plus ancien)
+                commentsList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                // Afficher tous les commentaires
+                displayComments('all');
+                
+                showToastNotification({
+                    type: "SUCCESS",
+                    message: `${commentsList.length} commentaires chargés`
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des commentaires:', error);
+                showToastNotification({
+                    type: "ERROR",
+                    message: `Erreur: ${error.message}`
+                });
+            });
+        }
+        
+        function addCommentToList(comment) {
+            // Vérifier si le commentaire existe déjà
+            const existingIndex = commentsList.findIndex(c => c.id === comment.id);
+            if (existingIndex >= 0) {
+                commentsList[existingIndex] = comment;
+            } else {
+                commentsList.push(comment);
+            }
+            
+            // Trier par date de création (du plus récent au plus ancien)
+            commentsList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+        
+        function displayComments(type) {
+            const commentsContainer = document.getElementById('comments');
+            commentsContainer.innerHTML = '';
+            
+            let filteredComments = [];
+            
+            if (type === 'all') {
+                filteredComments = commentsList;
+            } else if (type === 'author') {
+                filteredComments = commentsList.filter(comment => comment.isAuthor);
+            } else if (type === 'reviewers') {
+                filteredComments = commentsList.filter(comment => !comment.isAuthor);
+            }
+            
+            if (filteredComments.length === 0) {
+                commentsContainer.innerHTML = '<p>Aucun commentaire à afficher.</p>';
+                return;
+            }
+            
+            filteredComments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment';
+                
+                const dateOptions = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                const formattedDate = new Date(comment.createdAt).toLocaleDateString('fr-FR', dateOptions);
+                
+                commentElement.innerHTML = `
+                    <div class="comment-author">${comment.user.firstname} ${comment.user.lastname} ${comment.isAuthor ? '(Auteur)' : '(Reviewer)'}</div>
+                    <p>${comment.content}</p>
+                    ${comment.lineNumber ? `<small>Ligne: ${comment.lineNumber}</small><br>` : ''}
+                    <div class="comment-time">${formattedDate}</div>
+                `;
+                
+                commentsContainer.appendChild(commentElement);
+            });
+        }
+        
+        function addNotification(notification) {
+            notifications.unshift(notification); // Ajouter au début du tableau
+            if (notifications.length > 30) {
+                notifications.pop(); // Garder au maximum 30 notifications
+            }
+            
+            unreadNotifications++;
+            updateNotificationCounter();
+            
+            // Mettre à jour l'affichage des notifications
+            renderNotifications();
+        }
+        
+        function updateNotificationCounter() {
+            const counter = document.getElementById('notificationCounter');
+            
+            if (unreadNotifications > 0) {
+                counter.textContent = unreadNotifications;
+                counter.style.display = 'block';
+            } else {
+                counter.style.display = 'none';
+            }
+        }
+        
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'à l\'instant';
+            
+            const date = new Date(timestamp);
+            return date.toLocaleString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function renderNotifications() {
+            const notificationsContainer = document.getElementById('notificationsList');
+            notificationsContainer.innerHTML = '';
+            
+            if (notifications.length === 0) {
+                notificationsContainer.innerHTML = '<div class="notification">Aucune notification.</div>';
+                return;
+            }
+            
+            notifications.forEach((notification, index) => {
+                const notificationElement = document.createElement('div');
+                notificationElement.className = 'notification';
+                
+                if (index < unreadNotifications) {
+                    notificationElement.classList.add('unread');
+                }
+                
+                let notificationTitle = '';
+                let notificationContent = '';
+                let notificationType = '';
+                
+                if (notification.type === 'NEW_COMMENT') {
+                    notificationTitle = 'Nouveau commentaire';
+                    notificationContent = `<strong>${notification.reviewerName}</strong> a commenté votre script "${notification.scriptTitle}"`;
+                    
+                    if (notification.lineNumber) {
+                        notificationContent += ` à la ligne ${notification.lineNumber}`;
+                    }
+                    
+                    notificationContent += `<div style="margin-top:8px; padding:10px; background:#f5f5f5; border-radius:5px;"><em>"${notification.commentContent}"</em></div>`;
+                    notificationType = 'COMMENT';
+                } else {
+                    notificationTitle = 'Notification';
+                    notificationContent = notification.message || 'Nouvelle notification';
+                    notificationType = notification.type || 'INFO';
+                }
+                
+                const timestamp = notification.timestamp 
+                    ? new Date(notification.timestamp).toLocaleTimeString() 
+                    : new Date().toLocaleTimeString();
+                
+                notificationElement.innerHTML = `
+                    <div class="notification-title">${notificationTitle} <span class="notification-badge">${notificationType}</span></div>
+                    <div class="notification-message">${notificationContent}</div>
+                    <div class="notification-time">${timestamp}</div>
+                `;
+                
+                // Rendre la notification cliquable si elle concerne un script
+                if (notification.scriptId) {
+                    notificationElement.style.cursor = 'pointer';
+                    notificationElement.title = "Cliquez pour voir l'historique des révisions";
+                    
+                    notificationElement.addEventListener('click', () => {
+                        showScriptHistory(notification.scriptId);
+                        // Fermer le panneau de notifications
+                        document.getElementById('notificationPanel').style.display = 'none';
+                    });
+                }
+                
+                notificationsContainer.appendChild(notificationElement);
+            });
+        }
+        
+        function showToastNotification(notification) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast visible';
+            
+            let icon = '📣';
+            let title = 'Notification';
+            
+            if (notification.type === 'NEW_COMMENT') {
+                // Personnaliser pour un commentaire de reviewer avec couleur rouge
+                icon = '💬';
+                title = 'Nouveau commentaire';
+                
+                // Style de notification de type Facebook
+                toast.classList.add('toast-facebook', 'toast-reviewer');
+                
+                let reviewerName = notification.reviewerName || 'Un reviewer';
+                let scriptInfo = notification.scriptTitle ? `"${notification.scriptTitle}"` : `#${notification.scriptId}`;
+                let commentPreview = '';
+                
+                if (notification.commentContent) {
+                    commentPreview = `<div class="comment-preview">${notification.commentContent}</div>`;
+                }
+                
+                toast.innerHTML = `
+                    <div class="profile-pic reviewer">${reviewerName.charAt(0)}</div>
+                    <div class="toast-content-fb">
+                        <div class="sender-name">${reviewerName}</div>
+                        <div class="toast-message">a commenté votre script ${scriptInfo}</div>
+                        ${commentPreview}
+                        <div class="toast-time">${formatTimestamp(notification.timestamp)}</div>
+                    </div>
+                `;
+            } else if (notification.type === 'ERROR') {
+                icon = '❌';
+                title = 'Erreur';
+                toast.classList.add('toast-simple');
+                
+                toast.innerHTML = `
+                    <div class="toast-icon" style="background-color: #F44336;">${icon}</div>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div>${notification.message || ''}</div>
+                    </div>
+                `;
+            } else if (notification.type === 'SUCCESS') {
+                icon = '✅';
+                title = 'Succès';
+                toast.classList.add('toast-simple');
+                
+                toast.innerHTML = `
+                    <div class="toast-icon" style="background-color: #4CAF50;">${icon}</div>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div>${notification.message || ''}</div>
+                    </div>
+                `;
+            } else {
+                // Notification standard
+                toast.classList.add('toast-simple');
+                
+                toast.innerHTML = `
+                    <div class="toast-icon" style="background-color: #2196F3;">${icon}</div>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div>${notification.message || ''}</div>
+                    </div>
+                `;
+            }
+            
+            toastContainer.appendChild(toast);
+            
+            // Supprimer le toast après 5 secondes
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 500);
+            }, 5000);
+            
+            // Créer une notification dans le panneau si c'est un commentaire
+            if (notification.type === 'NEW_COMMENT') {
+                if (!notification.timestamp) {
+                    notification.timestamp = new Date().toISOString();
+                }
+                addNotification(notification);
+            }
+        }
+        
+        function sendComment() {
+            if (!stompClient) {
+                alert('Veuillez vous connecter d\'abord');
+                return;
+            }
+            
+            const commentText = document.getElementById('commentText').value;
+            const lineNumber = document.getElementById('lineNumber').value;
+            
+            if (!commentText) {
+                alert('Veuillez entrer un commentaire');
+                return;
+            }
+            
+            const comment = {
+                content: commentText,
+                lineNumber: lineNumber ? parseInt(lineNumber) : null
+            };
+            
+            fetch(`http://localhost:8080/api/comments?scriptId=${currentScriptId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(comment)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('commentText').value = '';
+                document.getElementById('lineNumber').value = '';
+                console.log('Commentaire envoyé', data);
+                
+                showToastNotification({
+                    type: "SUCCESS",
+                    message: "Commentaire envoyé avec succès"
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors de l\'envoi du commentaire:', error);
+                
+                showToastNotification({
+                    type: "ERROR",
+                    message: `Erreur: ${error.message}`
+                });
+            });
+        }
+        
+        // Fonction pour afficher une notification de changement de statut
+        function showStatusChangeNotification(statusNotification) {
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const content = `
+                <div class="toast-facebook">
+                    <div class="profile-pic reviewer">S</div>
+                    <div class="toast-content-fb">
+                        <div class="sender-name">Mise à jour de statut</div>
+                        <div class="toast-message">${statusNotification.message}</div>
+                        <div class="toast-time">${new Date(statusNotification.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            toast.innerHTML = content;
+            toastContainer.appendChild(toast);
+            
+            // Animation d'entrée
+            setTimeout(() => toast.classList.add('visible'), 10);
+            
+            // Animation de sortie après 5 secondes
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+        
+        // Fonction pour afficher l'historique des révisions d'un script
+        function showScriptHistory(scriptId) {
+            // Créer une modal pour afficher l'historique
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+            modalOverlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;';
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.style.cssText = 'background-color: white; width: 80%; max-width: 800px; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column;';
+            
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background-color: #f8f8f8; border-bottom: 1px solid #eee;">
+                    <h2 style="margin: 0; font-size: 18px;">Historique des révisions - Script #${scriptId}</h2>
+                    <button class="close-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+                </div>
+                <div id="historyContent" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #1877f2; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite;"></div>
+                        <p>Chargement de l'historique...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Ajouter un style pour l'animation de chargement
+            const styleEl = document.createElement('style');
+            styleEl.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(styleEl);
+            
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+            
+            // Fermer la modal au clic sur le bouton ou en-dehors
+            modalContent.querySelector('.close-modal').addEventListener('click', () => {
+                document.body.removeChild(modalOverlay);
+            });
+            
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    document.body.removeChild(modalOverlay);
+                }
+            });
+            
+            // Charger l'historique des révisions
+            fetchRevisionHistory(scriptId);
+        }
+        
+        // Fonction pour récupérer l'historique des révisions
+        function fetchRevisionHistory(scriptId) {
+            fetch(`http://localhost:8080/api/scripts/${scriptId}/history`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(history => {
+                displayRevisionHistory(history);
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération de l\'historique:', error);
+                document.getElementById('historyContent').innerHTML = `
+                    <div style="color: red; text-align: center; padding: 20px;">
+                        Erreur: ${error.message || 'Impossible de charger l\'historique'}
+                    </div>
+                `;
+            });
+        }
+        
+        // Fonction pour afficher l'historique des révisions
+        function displayRevisionHistory(history) {
+            const historyContent = document.getElementById('historyContent');
+            
+            if (!history || history.length === 0) {
+                historyContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                        Aucun historique de révision disponible pour ce script.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Trier l'historique par date (du plus récent au plus ancien)
+            history.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
+            
+            let historyHTML = `
+                <div style="border-radius: 6px; overflow: hidden; border: 1px solid #eee;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; background-color: #f8f8f8; font-weight: bold; padding: 10px 15px; border-bottom: 1px solid #eee;">
+                        <div>Date</div>
+                        <div>Modifié par</div>
+                        <div>Ancien statut</div>
+                        <div>Nouveau statut</div>
+                        <div>Commentaire</div>
+                    </div>
+            `;
+            
+            history.forEach(entry => {
+                const date = new Date(entry.modifiedAt).toLocaleString();
+                const userName = entry.user ? `${entry.user.firstname} ${entry.user.lastname}` : 'Inconnu';
+                
+                historyHTML += `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; padding: 12px 15px; border-bottom: 1px solid #eee;">
+                        <div>${date}</div>
+                        <div>${userName}</div>
+                        <div>${entry.oldStatus}</div>
+                        <div>${entry.newStatus}</div>
+                        <div>${entry.comment || '-'}</div>
+                    </div>
+                `;
+            });
+            
+            historyHTML += `</div>`;
+            historyContent.innerHTML = historyHTML;
+        }
+    </script>
+</body>
+</html>

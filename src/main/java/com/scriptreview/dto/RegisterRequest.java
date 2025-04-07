@@ -1,6 +1,9 @@
 package com.scriptreview.dto;
 
 import com.scriptreview.model.Role;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +17,8 @@ public class RegisterRequest {
    
 	private String firstname;
     private String lastname;
+    @NotNull(message = "L'email ne peut pas etre vide")
+    @Email(message="L'email doit etre valide")
     private String email;
     private String password;
     private Role role;

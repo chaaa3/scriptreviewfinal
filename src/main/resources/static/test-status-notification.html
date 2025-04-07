@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notification Changement de Status</title>
+    <!-- Import SockJS et STOMP pour les WebSockets -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stomp-websocket@2.3.4-next/lib/stomp.min.js"></script>
+    <style>
+        /* Animation de pulsation pour le badge de notification */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .pulse {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .notification {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+            background-color: #e7f3e8;
+        }
+        .notification.author {
+            border-left-color: #2196F3;
+            background-color: #e3f2fd;
+        }
+        .notification.reviewer {
+            border-left-color: #ff9800;
+            background-color: #fff3e0;
+        }
+        .meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        #scriptInfo {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation avec icône de notification -->
+    <div style="background-color: #4267B2; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-radius: 5px;">
+        <div style="font-weight: bold; font-size: 18px;">Script Review Platform</div>
+        <div style="display: flex; align-items: center;">
+            <div class="notification-icon" style="position: relative; margin-left: 15px; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M12,22 C13.1,22 14,21.1 14,20 L10,20 C10,21.1 10.9,22 12,22 Z M18,16 L18,11 C18,7.93 16.36,5.36 13.5,4.68 L13.5,4 C13.5,3.17 12.83,2.5 12,2.5 C11.17,2.5 10.5,3.17 10.5,4 L10.5,4.68 C7.63,5.36 6,7.92 6,11 L6,16 L4,18 L4,19 L20,19 L20,18 L18,16 Z"></path>
+                </svg>
+                <span id="global-notification-badge" style="position: absolute; top: -8px; right: -8px; background-color: #FF3B30; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; display: none;">0</span>
+                
+                <!-- Panneau de notifications -->
+                <div id="notification-panel" style="display: none; position: absolute; top: 30px; right: 0; width: 350px; max-height: 450px; overflow-y: auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; color: #333;">
+                    <div style="background-color: #f8f8f8; padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #eee; border-radius: 8px 8px 0 0;">
+                        Notifications
+                    </div>
+                    <div id="global-notifications-list">
+                        <div style="padding: 15px; text-align: center; color: #888;">
+                            Aucune notification
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h1>Test de Notification de Changement de Status</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Connexion et Configuration</h2>
+            
+            <div class="form-group">
+                <label for="token">Token JWT (Auteur ou Reviewer)</label>
+                <input type="text" id="token" placeholder="Entrez votre token JWT">
+            </div>
+            
+            <div class="form-group">
+                <label for="scriptId">ID du Script</label>
+                <input type="number" id="scriptId" placeholder="Entrez l'ID du script" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="userId">Votre ID Utilisateur</label>
+                <input type="number" id="userId" placeholder="Entrez votre ID utilisateur">
+            </div>
+            
+            <div class="form-group">
+                <label for="userRole">Votre Rôle</label>
+                <select id="userRole">
+                    <option value="AUTEUR">Auteur</option>
+                    <option value="REVIEWER">Reviewer</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="soundEnabled">Sons de notification</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="soundEnabled" style="width: auto; margin-right: 10px;" checked>
+                    <label for="soundEnabled" style="font-weight: normal;">Activer les sons de notification</label>
+                </div>
+            </div>
+            
+            <button id="connectBtn">Se Connecter</button>
+            <button id="disconnectBtn" disabled>Se Déconnecter</button>
+            
+            <div id="connectionStatus" style="margin-top: 15px; font-weight: bold;">Non connecté</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Modification du Status</h2>
+            
+            <div id="scriptInfo">
+                <p>Chargez d'abord les informations du script...</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="newStatus">Nouveau Status</label>
+                <select id="newStatus">
+                    <option value="PENDING_REVIEW">En attente de révision</option>
+                    <option value="UNDER_REVIEW">En cours de révision</option>
+                    <option value="NEEDS_MODIFICATION">Nécessite des modifications</option>
+                    <option value="REVIEWED">Révisé</option>
+                    <option value="APPROVED">Approuvé</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="comment">Commentaire (optionnel)</label>
+                <textarea id="comment" rows="3" placeholder="Ajoutez un commentaire sur ce changement de statut"></textarea>
+            </div>
+            
+            <button id="updateStatusBtn" disabled>Mettre à jour le Status</button>
+        </div>
+        
+        <div class="panel">
+            <h2>Notifications Reçues</h2>
+            <div id="notificationsContainer">
+                <p>Connectez-vous pour voir les notifications...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let stompClient = null;
+        let connected = false;
+        let currentScriptId = null;
+        let currentUserId = null;
+        
+        // Éléments DOM
+        const tokenInput = document.getElementById('token');
+        const scriptIdInput = document.getElementById('scriptId');
+        const userIdInput = document.getElementById('userId');
+        const userRoleSelect = document.getElementById('userRole');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const newStatusSelect = document.getElementById('newStatus');
+        const commentInput = document.getElementById('comment');
+        const updateStatusBtn = document.getElementById('updateStatusBtn');
+        const notificationsContainer = document.getElementById('notificationsContainer');
+        const scriptInfo = document.getElementById('scriptInfo');
+        
+        // Événements
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        updateStatusBtn.addEventListener('click', updateScriptStatus);
+        
+        // Charger le token du localStorage s'il existe
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedToken = localStorage.getItem('authToken');
+            const savedUserId = localStorage.getItem('userId');
+            
+            if (savedToken) {
+                tokenInput.value = savedToken;
+                console.log('Token chargé depuis localStorage');
+                
+                // Si l'ID utilisateur n'est pas disponible dans localStorage, essayons de l'extraire du token
+                if (!savedUserId) {
+                    try {
+                        const tokenPayload = parseJwt(savedToken);
+                        console.log('Payload du token:', tokenPayload);
+                        
+                        // Essayer de trouver l'ID utilisateur dans le token
+                        if (tokenPayload.userId) {
+                            userIdInput.value = tokenPayload.userId;
+                            console.log('ID utilisateur extrait du token:', tokenPayload.userId);
+                        }
+                        
+                        // Essayer de déterminer le rôle
+                        if (tokenPayload.authorities) {
+                            const role = tokenPayload.authorities.replace('ROLE_', '');
+                            userRoleSelect.value = role;
+                            console.log('Rôle extrait du token:', role);
+                        } else if (tokenPayload.role) {
+                            userRoleSelect.value = tokenPayload.role;
+                        }
+                    } catch (e) {
+                        console.error('Erreur lors de l\'extraction des informations du token:', e);
+                    }
+                }
+            }
+            
+            if (savedUserId) {
+                userIdInput.value = savedUserId;
+                console.log('ID utilisateur chargé depuis localStorage:', savedUserId);
+            }
+            
+            // Vérifier s'il y a un scriptId dans l'URL ou dans localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const scriptIdFromURL = urlParams.get('scriptId');
+            const scriptIdFromStorage = localStorage.getItem('openHistoryForScript');
+            
+            if (scriptIdFromURL) {
+                scriptIdInput.value = scriptIdFromURL;
+                console.log('Script ID chargé depuis URL:', scriptIdFromURL);
+                
+                // Si on a aussi un token, se connecter automatiquement
+                if (savedToken && savedUserId) {
+                    // Attendre un peu pour laisser la page se charger
+                    setTimeout(() => {
+                        connect();
+                        
+                        // Ouvrir l'historique après connexion
+                        setTimeout(() => {
+                            openRevisionHistory(scriptIdFromURL);
+                        }, 1000);
+                    }, 500);
+                }
+            } else if (scriptIdFromStorage) {
+                scriptIdInput.value = scriptIdFromStorage;
+                console.log('Script ID chargé depuis localStorage:', scriptIdFromStorage);
+                localStorage.removeItem('openHistoryForScript'); // Nettoyer localStorage
+                
+                // Si on a aussi un token, se connecter automatiquement
+                if (savedToken && savedUserId) {
+                    // Attendre un peu pour laisser la page se charger
+                    setTimeout(() => {
+                        connect();
+                        
+                        // Ouvrir l'historique après connexion
+                        setTimeout(() => {
+                            openRevisionHistory(scriptIdFromStorage);
+                        }, 1000);
+                    }, 500);
+                }
+            }
+        });
+        
+        // Fonction pour decoder le JWT
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Erreur lors du parsing du JWT:', e);
+                return {};
+            }
+        }
+        
+        // Fonctions
+        function connect() {
+            const token = tokenInput.value.trim();
+            const scriptId = scriptIdInput.value.trim();
+            const userId = userIdInput.value.trim();
+            
+            if (!token) {
+                alert("Veuillez entrer un token JWT valide");
+                return;
+            }
+            
+            if (!scriptId) {
+                alert("Veuillez entrer un ID de script valide");
+                return;
+            }
+            
+            if (!userId) {
+                alert("Veuillez entrer votre ID utilisateur");
+                return;
+            }
+            
+            currentScriptId = scriptId;
+            currentUserId = userId;
+            
+            // Connexion WebSocket
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+            
+            connectionStatus.textContent = 'Connexion en cours...';
+            
+            stompClient.connect(headers, onConnected, onError);
+        }
+        
+        function onConnected(frame) {
+            connected = true;
+            connectionStatus.textContent = 'Connecté!';
+            connectionStatus.style.color = 'green';
+            
+            // Activer/désactiver les boutons
+            connectBtn.disabled = true;
+            disconnectBtn.disabled = false;
+            updateStatusBtn.disabled = false;
+            
+            // S'abonner aux notifications personnelles
+            stompClient.subscribe('/user/queue/notifications', onNotificationReceived);
+            
+            // S'abonner aux notifications de statut du script
+            stompClient.subscribe(`/topic/script.${currentScriptId}.status`, onStatusChanged);
+            
+            // Ajouter une notification de succès
+            addNotification({
+                message: `Connecté au script #${currentScriptId}`,
+                type: 'CONNECTION',
+                timestamp: new Date().toISOString()
+            });
+            
+            // Charger les informations du script
+            fetchScriptInfo();
+        }
+        
+        function onError(error) {
+            connectionStatus.textContent = `Erreur de connexion: ${error}`;
+            connectionStatus.style.color = 'red';
+            connected = false;
+            
+            // Réinitialiser l'état des boutons
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            updateStatusBtn.disabled = true;
+        }
+        
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                
+                // Réinitialiser l'état
+                connected = false;
+                connectionStatus.textContent = 'Déconnecté';
+                connectionStatus.style.color = 'black';
+                
+                // Réinitialiser les boutons
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                updateStatusBtn.disabled = true;
+                
+                // Ajouter une notification
+                addNotification({
+                    message: 'Déconnecté du serveur WebSocket',
+                    type: 'DISCONNECTION',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+        
+        function onNotificationReceived(payload) {
+            const notification = JSON.parse(payload.body);
+            console.log('Notification personnelle reçue:', notification);
+            addNotification(notification, 'author');
+        }
+        
+        function onStatusChanged(payload) {
+            const statusNotification = JSON.parse(payload.body);
+            console.log('Notification de changement de statut reçue:', statusNotification);
+            addNotification(statusNotification, 'reviewer');
+            
+            // Mettre à jour les informations du script
+            fetchScriptInfo();
+        }
+        
+        function addNotification(notification, cssClass = '') {
+            // Supprimer le message d'information si présent
+            if (notificationsContainer.innerHTML.includes('Connectez-vous pour voir les notifications...')) {
+                notificationsContainer.innerHTML = '';
+            }
+            
+            const notifElement = document.createElement('div');
+            notifElement.className = `notification ${cssClass}`;
+            
+            const timestamp = notification.timestamp 
+                ? new Date(notification.timestamp).toLocaleString()
+                : new Date().toLocaleString();
+            
+            notifElement.innerHTML = `
+                <div class="message">${notification.message}</div>
+                <div class="meta">${timestamp} - Type: ${notification.type || 'INFO'}</div>
+            `;
+            
+            // Insérer au début pour avoir les plus récentes en haut
+            notificationsContainer.insertBefore(notifElement, notificationsContainer.firstChild);
+        }
+        
+        function updateScriptStatus() {
+            if (!connected) {
+                alert('Vous devez être connecté pour modifier le statut');
+                return;
+            }
+            
+            const newStatus = newStatusSelect.value;
+            const comment = commentInput.value.trim();
+            
+            // Envoi de la requête HTTP pour mettre à jour le statut
+            const url = `/api/scripts/${currentScriptId}/status?status=${newStatus}&userId=${currentUserId}`;
+            const finalUrl = comment ? `${url}&comment=${encodeURIComponent(comment)}` : url;
+            
+            fetch(finalUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokenInput.value.trim()}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Statut mis à jour avec succès:', data);
+                addNotification({
+                    message: `Vous avez modifié le statut en ${newStatus}`,
+                    type: 'STATUS_UPDATE_SUCCESS',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Effacer le commentaire
+                commentInput.value = '';
+            })
+            .catch(error => {
+                console.error('Erreur lors de la mise à jour du statut:', error);
+                addNotification({
+                    message: `Erreur: ${error.message}`,
+                    type: 'ERROR',
+                    timestamp: new Date().toISOString()
+                });
+            });
+        }
+        
+        function fetchScriptInfo() {
+            fetch(`/api/scripts/${currentScriptId}`, {
+                headers: {
+                    'Authorization': `Bearer ${tokenInput.value.trim()}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(script => {
+                console.log('Informations du script:', script);
+                
+                // Afficher les informations du script
+                scriptInfo.innerHTML = `
+                    <h3>${script.title}</h3>
+                    <p><strong>Status actuel:</strong> ${script.status}</p>
+                    <p><strong>Auteur:</strong> ${script.author.firstname} ${script.author.lastname}</p>
+                    <p><strong>Dernière mise à jour:</strong> ${new Date(script.updatedAt).toLocaleString()}</p>
+                `;
+                
+                // Mettre à jour le sélecteur de statut avec le statut actuel
+                newStatusSelect.value = script.status;
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des informations du script:', error);
+                scriptInfo.innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+            });
+        }
+    </script>
+    
+    <script>
+        // Gestion des notifications globales
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationIcon = document.querySelector('.notification-icon');
+            const notificationPanel = document.getElementById('notification-panel');
+            const notificationBadge = document.getElementById('global-notification-badge');
+            
+            // État des notifications
+            let unreadCount = 0;
+            let globalNotifications = [];
+            
+            // Gestionnaire de clic sur l'icône de notification
+            notificationIcon.addEventListener('click', function(event) {
+                event.stopPropagation();
+                
+                if (notificationPanel.style.display === 'block') {
+                    notificationPanel.style.display = 'none';
+                } else {
+                    notificationPanel.style.display = 'block';
+                    // Marquer comme lu
+                    if (unreadCount > 0) {
+                        unreadCount = 0;
+                        updateNotificationBadge();
+                        renderNotifications();
+                    }
+                }
+            });
+            
+            // Fermer le panneau en cliquant ailleurs
+            document.addEventListener('click', function(event) {
+                if (event.target !== notificationIcon && !notificationPanel.contains(event.target)) {
+                    notificationPanel.style.display = 'none';
+                }
+            });
+            
+            // Fonction de mise à jour du badge
+            function updateNotificationBadge() {
+                if (unreadCount > 0) {
+                    notificationBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                    notificationBadge.style.display = 'flex';
+                } else {
+                    notificationBadge.style.display = 'none';
+                }
+            }
+            
+            // Fonction de rendu des notifications
+            function renderNotifications() {
+                const listElement = document.getElementById('global-notifications-list');
+                listElement.innerHTML = '';
+                
+                if (globalNotifications.length === 0) {
+                    listElement.innerHTML = `
+                        <div style="padding: 15px; text-align: center; color: #888;">
+                            Aucune notification
+                        </div>
+                    `;
+                    return;
+                }
+                
+                globalNotifications.forEach((notification, index) => {
+                    const notifElement = document.createElement('div');
+                    notifElement.style.cssText = 'padding: 15px; border-bottom: 1px solid #eee; transition: background-color 0.2s; position: relative; cursor: pointer;';
+                    
+                    if (index < unreadCount) {
+                        notifElement.style.backgroundColor = '#e6f3ff';
+                        // Barre latérale bleue pour non lu
+                        const blueLine = document.createElement('div');
+                        blueLine.style.cssText = 'position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #1877f2;';
+                        notifElement.appendChild(blueLine);
+                    }
+                    
+                    // Récupérer l'ID du script de la notification
+                    const scriptId = notification.scriptId || currentScriptId;
+                    
+                    notifElement.innerHTML += `
+                        <div style="font-weight: bold; margin-bottom: 5px; color: #1877f2;">
+                            ${notification.type || 'STATUS_CHANGE'}
+                        </div>
+                        <div style="margin-bottom: 8px; line-height: 1.4;">
+                            ${notification.message || 'Changement de statut'}
+                        </div>
+                        <div style="font-size: 0.8em; color: #888;">
+                            ${new Date(notification.timestamp).toLocaleString()}
+                        </div>
+                    `;
+                    
+                    // Ajouter l'événement de clic pour ouvrir l'historique de révision
+                    notifElement.addEventListener('click', () => {
+                        openRevisionHistory(scriptId);
+                        notificationPanel.style.display = 'none'; // Fermer le panneau après le clic
+                    });
+                    
+                    listElement.appendChild(notifElement);
+                });
+            }
+            
+            // Intercepter les nouvelles notifications du système existant
+            const originalAddNotification = window.addNotification || function() {};
+            window.addNotification = function(notification, cssClass) {
+                // Appeler la fonction originale
+                originalAddNotification(notification, cssClass);
+                
+                // Ajouter à notre système global
+                addGlobalNotification(notification, cssClass);
+            };
+            
+            // Fonction pour ajouter une notification
+            window.addGlobalNotification = function(notification, cssClass = '') {
+                globalNotifications.unshift(notification); // Ajouter au début
+                if (globalNotifications.length > 30) globalNotifications.pop(); // Limiter à 30
+                
+                unreadCount++;
+                updateNotificationBadge();
+                renderNotifications();
+                
+                // Animation du badge
+                notificationBadge.classList.add('pulse');
+                setTimeout(() => {
+                    notificationBadge.classList.remove('pulse');
+                }, 1000);
+                
+                // Jouer le son de notification UNIQUEMENT pour les changements de statut ou les commentaires
+                const notifType = notification.type || '';
+                const isStatusChange = notifType.includes('STATUS') || cssClass === 'reviewer';
+                const isCommentNotif = notifType.includes('COMMENT') || notification.message?.includes('commenté');
+                
+                if (isStatusChange || isCommentNotif) {
+                    playNotificationSound();
+                }
+            }
+            
+            // Fonction pour jouer le son de notification
+            function playNotificationSound() {
+                // Vérifier si les sons sont activés
+                const soundEnabled = document.getElementById('soundEnabled').checked;
+                if (!soundEnabled) return;
+                
+                const sound = document.getElementById('notification-sound');
+                
+                // Réinitialiser le son avant de le jouer (pour permettre de rejouer le son)
+                sound.pause();
+                sound.currentTime = 0;
+                
+                // Jouer le son
+                sound.play().catch(e => {
+                    console.warn("Impossible de jouer le son de notification:", e);
+                    // Les navigateurs peuvent bloquer la lecture automatique sans interaction utilisateur
+                });
+            }
+            
+            // Fonction pour ouvrir l'historique de révision
+            function openRevisionHistory(scriptId) {
+                if (!scriptId) {
+                    console.error("ID de script non défini pour l'historique de révision");
+                    return;
+                }
+                
+                // Créer une modal ou popup pour afficher l'historique
+                const modalOverlay = document.createElement('div');
+                modalOverlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;';
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = 'background-color: white; width: 80%; max-width: 800px; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column;';
+                
+                modalContent.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background-color: #f8f8f8; border-bottom: 1px solid #eee;">
+                        <h2 style="margin: 0; font-size: 18px;">Historique de révision du script #${scriptId}</h2>
+                        <button id="closeHistoryModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">×</button>
+                    </div>
+                    <div id="revisionHistoryContent" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #4267B2; border-radius: 50%; border-top-color: transparent; animation: rotation 1s linear infinite;"></div>
+                            <p>Chargement de l'historique...</p>
+                        </div>
+                    </div>
+                `;
+                
+                modalOverlay.appendChild(modalContent);
+                document.body.appendChild(modalOverlay);
+                
+                // Style pour l'animation de chargement
+                const styleElement = document.createElement('style');
+                styleElement.textContent = `
+                    @keyframes rotation {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(styleElement);
+                
+                // Fermer la modal quand on clique sur le bouton de fermeture ou en dehors
+                document.getElementById('closeHistoryModal').addEventListener('click', () => {
+                    document.body.removeChild(modalOverlay);
+                });
+                
+                modalOverlay.addEventListener('click', (event) => {
+                    if (event.target === modalOverlay) {
+                        document.body.removeChild(modalOverlay);
+                    }
+                });
+                
+                // Charger l'historique de révision du script
+                fetchRevisionHistory(scriptId);
+            }
+            
+            // Fonction pour récupérer l'historique de révision
+            function fetchRevisionHistory(scriptId) {
+                fetch(`/api/scripts/${scriptId}/history`, {
+                    headers: {
+                        'Authorization': `Bearer ${tokenInput.value.trim()}`
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(history => {
+                    displayRevisionHistory(history);
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération de l\'historique:', error);
+                    document.getElementById('revisionHistoryContent').innerHTML = `
+                        <div style="color: red; text-align: center; padding: 20px;">
+                            Erreur: ${error.message}
+                        </div>
+                    `;
+                });
+            }
+            
+            // Fonction pour afficher l'historique de révision
+            function displayRevisionHistory(history) {
+                const historyContent = document.getElementById('revisionHistoryContent');
+                
+                if (!history || history.length === 0) {
+                    historyContent.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #666;">
+                            Aucun historique de révision disponible pour ce script.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Trier par date (du plus récent au plus ancien)
+                history.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
+                
+                let historyHTML = `
+                    <div style="border-radius: 6px; overflow: hidden; border: 1px solid #eee;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; background-color: #f8f8f8; font-weight: bold; padding: 10px 15px; border-bottom: 1px solid #eee;">
+                            <div>Date</div>
+                            <div>Modifié par</div>
+                            <div>Ancien Statut</div>
+                            <div>Nouveau Statut</div>
+                            <div>Commentaire</div>
+                        </div>
+                `;
+                
+                history.forEach(entry => {
+                    const date = new Date(entry.modifiedAt).toLocaleString();
+                    const userName = entry.user ? `${entry.user.firstname} ${entry.user.lastname}` : 'Inconnu';
+                    
+                    historyHTML += `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; padding: 12px 15px; border-bottom: 1px solid #eee;">
+                            <div>${date}</div>
+                            <div>${userName}</div>
+                            <div>${entry.oldStatus}</div>
+                            <div>${entry.newStatus}</div>
+                            <div>${entry.comment || '-'}</div>
+                        </div>
+                    `;
+                });
+                
+                historyHTML += `</div>`;
+                historyContent.innerHTML = historyHTML;
+            }
+        });
+    </script>
+    
+    <!-- Élément audio pour le son de notification -->
+    <audio id="notification-sound" preload="auto">
+        <source src="https://cdn.pixabay.com/download/audio/2021/10/04/audio_00fa5569ff.mp3?filename=notification-sound-7062.mp3" type="audio/mp3">
+        <!-- Son alternatif si le premier ne fonctionne pas -->
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=interface-124464.mp3" type="audio/mp3">
+    </audio>
+</body>
+</html> 

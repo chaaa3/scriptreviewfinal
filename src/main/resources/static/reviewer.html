@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reviewer - Test Script Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stomp-websocket@2.3.4-next/lib/stomp.min.js"></script>
+    <style>
+        /* Styles améliorés pour les différentes notifications */
+        .toast-reviewer {
+            border-left: 4px solid #42b72a; /* Couleur verte pour les reviewers */
+        }
+
+        .toast-author {
+            border-left: 4px solid #4267B2; /* Couleur bleue pour l'auteur */
+        }
+
+        .profile-pic.author {
+            background-color: #4267B2; /* Facebook blue */
+        }
+
+        .profile-pic.reviewer {
+            background-color: #42b72a; /* Facebook green */
+        }
+
+        .comment-preview {
+            background-color: #f0f2f5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin: 8px 0;
+            color: #333;
+            position: relative;
+            border-left: 3px solid #ddd;
+            font-style: italic;
+        }
+
+        .toast-time {
+            font-size: 12px;
+            color: #65676b;
+            margin-top: 6px;
+        }
+        /* Styles améliorés pour les notifications style Facebook */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 350px;
+        }
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 10px;
+            overflow: hidden;
+            transform: translateX(120%);
+            transition: transform 0.3s ease-out;
+            border-left: 4px solid #1877f2;
+        }
+        .toast.visible {
+            transform: translateX(0);
+        }
+        .toast.hiding {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .toast-facebook {
+            display: flex;
+            padding: 12px;
+        }
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .profile-pic.author {
+            background-color: #4267B2; /* Facebook blue */
+        }
+        .profile-pic.reviewer {
+            background-color: #42b72a; /* Facebook green */
+        }
+        .toast-content-fb {
+            flex-grow: 1;
+        }
+        .sender-name {
+            font-weight: bold;
+            color: #1c1e21;
+            margin-bottom: 4px;
+        }
+        .toast-message {
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .comment-preview {
+            background-color: #f0f2f5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin: 6px 0;
+            color: #333;
+            position: relative;
+            border-left: 3px solid #ddd;
+        }
+        .comment-preview::before {
+            content: '"';
+            font-size: 18px;
+            color: #999;
+            position: absolute;
+            left: 4px;
+            top: 0;
+        }
+        .comment-preview::after {
+            content: '"';
+            font-size: 18px;
+            color: #999;
+            position: absolute;
+            right: 4px;
+            bottom: 0;
+        }
+        .toast-time {
+            font-size: 11px;
+            color: #65676b;
+            margin-top: 4px;
+        }
+        .toast-comment {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            animation: highlight 2s;
+        }
+        @keyframes highlight {
+            0% { box-shadow: 0 0 20px rgba(24, 119, 242, 0.7); }
+            70% { box-shadow: 0 0 10px rgba(24, 119, 242, 0.4); }
+            100% { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Style de notification amélioré */
+        .notification-container { position: relative; }
+        .notification-counter {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .notification-bell {
+            font-size: 28px;
+            cursor: pointer;
+            margin-right: 15px;
+            transition: transform 0.3s;
+        }
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+        .notification-panel {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: -10px;
+            width: 350px;
+            max-height: 450px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .notification-panel-header {
+            background-color: #f8f8f8;
+            padding: 12px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            border-radius: 8px 8px 0 0;
+        }
+        .notification {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+        .notification:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        .notification:hover {
+            background-color: #f5f5f5;
+        }
+        .notification.unread {
+            background-color: #e6f3ff;
+        }
+        .notification.unread:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #1877f2;
+        }
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1877f2;
+        }
+        .notification-message {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .notification-time {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .notification-badge {
+            display: inline-block;
+            background-color: #1877f2;
+            color: white;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast-icon {
+            background-color: #1877f2;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .toast-content {
+            flex-grow: 1;
+        }
+        .toast-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .toast-simple {
+            display: flex;
+            padding: 12px;
+            background-color: white;
+            color: #333;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Autres styles */
+        h1, h3 { color: #333; }
+        .comment { 
+            border-bottom: 1px solid #eee; 
+            padding: 15px 0;
+        }
+        .comment-author { 
+            font-weight: bold; 
+            color: #0d6efd; 
+            margin-bottom: 5px;
+        }
+        .comment-time { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+            margin-top: 5px;
+        }
+        textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        button { 
+            padding: 10px 20px; 
+            background-color: #0d6efd; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0b5ed7;
+        }
+        .tab { 
+            margin-right: 20px; 
+            display: inline-block; 
+            padding: 10px; 
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab:hover {
+            color: #0d6efd;
+        }
+        .active-tab { 
+            font-weight: bold; 
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+        }
+        input[type=text], input[type=number] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .script-content { 
+            background-color: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vue Reviewer - Test Script Review</h1>
+        
+        <div class="card">
+            <h3>Connexion</h3>
+            <input type="text" id="token" placeholder="Token JWT" style="width: 70%; padding: 8px;">
+            <input type="text" id="scriptId" placeholder="ID du script" style="width: 20%; padding: 8px;">
+            <button id="connect">Se connecter</button>
+        </div>
+        
+        <div class="card">
+            <div class="header-actions">
+                <h3>Notifications</h3>
+                <div class="notification-container">
+                    <span class="notification-bell" id="notificationBell">🔔</span>
+                    <span class="notification-counter" id="notificationCounter">0</span>
+                    <div class="notification-panel" id="notificationPanel">
+                        <div class="notification-panel-header">Notifications</div>
+                        <div id="notificationsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Contenu du script</h3>
+            <div id="scriptContent" class="script-content">Chargement du script...</div>
+        </div>
+        
+        <div class="card">
+            <div>
+                <span class="tab active-tab" id="tab-all">Tous les commentaires</span>
+                <span class="tab" id="tab-author">Commentaires de l'auteur</span>
+                <span class="tab" id="tab-reviewers">Commentaires des reviewers</span>
+            </div>
+            <div id="comments" style="margin-top: 15px;"></div>
+        </div>
+        
+        <div class="card">
+            <h3>Ajouter un commentaire (Reviewer)</h3>
+            <textarea id="commentText" rows="4" placeholder="Votre commentaire de review..."></textarea>
+            <input type="number" id="lineNumber" placeholder="Numéro de ligne">
+            <button id="sendComment">Envoyer</button>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let stompClient = null;
+        let token = '';
+        let currentScriptId = '';
+        let commentsList = [];
+        let unreadNotifications = 0;
+        let notifications = [];
+        let currentUserId = null; // Pour stocker l'ID de l'utilisateur actuel
+        
+        document.getElementById('connect').addEventListener('click', function() {
+            token = document.getElementById('token').value;
+            currentScriptId = document.getElementById('scriptId').value;
+            
+            if (!token || !currentScriptId) {
+                alert('Veuillez entrer un token JWT et un ID de script');
+                return;
+            }
+            
+            connect();
+            loadScript();
+        });
+        
+        document.getElementById('sendComment').addEventListener('click', function() {
+            sendComment();
+        });
+        
+        document.getElementById('tab-all').addEventListener('click', function() {
+            setActiveTab('tab-all');
+            displayComments('all');
+        });
+        
+        document.getElementById('tab-author').addEventListener('click', function() {
+            setActiveTab('tab-author');
+            displayComments('author');
+        });
+        
+        document.getElementById('tab-reviewers').addEventListener('click', function() {
+            setActiveTab('tab-reviewers');
+            displayComments('reviewers');
+        });
+        
+        document.getElementById('notificationBell').addEventListener('click', function() {
+            toggleNotificationPanel();
+        });
+        
+        // Fermer le panneau de notification en cliquant ailleurs
+        document.addEventListener('click', function(event) {
+            const notificationPanel = document.getElementById('notificationPanel');
+            const notificationBell = document.getElementById('notificationBell');
+            
+            if (event.target !== notificationBell && event.target !== notificationPanel && !notificationPanel.contains(event.target)) {
+                notificationPanel.style.display = 'none';
+            }
+        });
+        
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notificationPanel');
+            
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                markNotificationsAsRead();
+            }
+        }
+        
+        function markNotificationsAsRead() {
+            unreadNotifications = 0;
+            updateNotificationCounter();
+            
+            // Marquer toutes les notifications comme lues
+            const notificationElements = document.querySelectorAll('.notification.unread');
+            notificationElements.forEach(element => {
+                element.classList.remove('unread');
+            });
+        }
+        
+        function setActiveTab(tabId) {
+            document.getElementById('tab-all').classList.remove('active-tab');
+            document.getElementById('tab-author').classList.remove('active-tab');
+            document.getElementById('tab-reviewers').classList.remove('active-tab');
+            document.getElementById(tabId).classList.add('active-tab');
+        }
+        
+        function connect() {
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+            
+            stompClient.connect(headers, function(frame) {
+                console.log('Connecté: ' + frame);
+                
+                // Obtenir l'ID de l'utilisateur actuel à partir du token
+                try {
+                    // Cette ligne suppose que vous avez accès à l'ID utilisateur 
+                    // Vous devrez peut-être adapter selon votre implémentation
+                    currentUserId = getUserIdFromToken(token); 
+                } catch(e) {
+                    console.log("Impossible d'extraire l'ID utilisateur du token:", e);
+                }
+                
+                // S'abonner aux notifications personnelles
+                stompClient.subscribe('/user/queue/notifications', function(notification) {
+                    const notificationData = JSON.parse(notification.body);
+                    console.log("Notification personnelle reçue:", notificationData);
+                    addNotification(notificationData);
+                    showToastNotification(notificationData);
+                });
+                
+                // S'abonner aux commentaires du script
+                if (currentScriptId) {
+                    stompClient.subscribe(`/topic/script.${currentScriptId}.comments`, function(commentMessage) {
+                        const comment = JSON.parse(commentMessage.body);
+                        console.log("Nouveau commentaire reçu via WebSocket:", comment);
+                        addCommentToUI(comment);
+                        if (comment.user.id !== currentUserId) {
+                            showCommentNotification(comment);
+                        }
+                    });
+                    
+                    // S'abonner aux notifications de changement de statut du script
+                    stompClient.subscribe(`/topic/script.${currentScriptId}.status`, function(statusMessage) {
+                        const statusNotification = JSON.parse(statusMessage.body);
+                        console.log("Changement de statut reçu via WebSocket:", statusNotification);
+                        // Mettre à jour l'UI pour refléter le nouveau statut
+                        fetchAndDisplayScript(currentScriptId);
+                        // Afficher une notification pour informer l'utilisateur
+                        showStatusChangeNotification(statusNotification);
+                    });
+                }
+                
+                // Charger les commentaires existants
+                loadExistingComments();
+                
+                // Notification simple de connexion
+                showToastNotification({
+                    type: "SUCCESS",
+                    message: "Connecté avec succès"
+                });
+            }, function(error) {
+                console.error('Erreur de connexion WebSocket:', error);
+                showToastNotification({
+                    type: "ERROR",
+                    message: "Erreur de connexion: " + error
+                });
+            });
+        }
+        
+        // Fonction factice pour extraire l'ID utilisateur du token
+        function getUserIdFromToken(token) {
+            return null; // Placeholder - vous devrez implémenter ceci selon votre logique
+        }
+        
+        function loadScript() {
+            fetch(`http://localhost:8080/api/scripts/${currentScriptId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('scriptContent').textContent = data.content;
+                console.log("Script chargé avec succès");
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement du script:', error);
+                document.getElementById('scriptContent').textContent = 'Erreur lors du chargement du script: ' + error.message;
+                showToastNotification({
+                    type: "ERROR",
+                    message: "Erreur lors du chargement du script: " + error.message
+                });
+            });
+        }
+        
+        function loadExistingComments() {
+            fetch(`http://localhost:8080/api/comments/script/${currentScriptId}/history`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Fusionner tous les commentaires dans une seule liste
+                commentsList = [];
+                
+                // Ajouter les commentaires de l'auteur
+                if (data.authorComments) {
+                    data.authorComments.forEach(comment => {
+                        comment.isAuthor = true;
+                        commentsList.push(comment);
+                    });
+                }
+                
+                // Ajouter les commentaires des reviewers
+                if (data.reviewerComments) {
+                    Object.values(data.reviewerComments).forEach(commentsArray => {
+                        commentsArray.forEach(comment => {
+                            comment.isAuthor = false;
+                            commentsList.push(comment);
+                        });
+                    });
+                }
+                
+                // Trier par date de création (du plus récent au plus ancien)
+                commentsList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                // Afficher tous les commentaires
+                displayComments('all');
+                
+                console.log(`${commentsList.length} commentaires chargés`);
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des commentaires:', error);
+                showToastNotification({
+                    type: "ERROR",
+                    message: "Erreur lors du chargement des commentaires: " + error.message
+                });
+            });
+        }
+        
+        function addCommentToList(comment) {
+            // Vérifier si le commentaire existe déjà
+            const existingIndex = commentsList.findIndex(c => c.id === comment.id);
+            if (existingIndex >= 0) {
+                commentsList[existingIndex] = comment;
+            } else {
+                commentsList.push(comment);
+            }
+            
+            // Trier par date de création (du plus récent au plus ancien)
+            commentsList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+        
+        function displayComments(type) {
+            const commentsContainer = document.getElementById('comments');
+            commentsContainer.innerHTML = '';
+            
+            let filteredComments = [];
+            
+            if (type === 'all') {
+                filteredComments = commentsList;
+            } else if (type === 'author') {
+                filteredComments = commentsList.filter(comment => comment.isAuthor);
+            } else if (type === 'reviewers') {
+                filteredComments = commentsList.filter(comment => !comment.isAuthor);
+            }
+            
+            if (filteredComments.length === 0) {
+                commentsContainer.innerHTML = '<p>Aucun commentaire à afficher.</p>';
+                return;
+            }
+            
+            filteredComments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment';
+                
+                const dateOptions = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                const formattedDate = new Date(comment.createdAt).toLocaleDateString('fr-FR', dateOptions);
+                
+                commentElement.innerHTML = `
+                    <div class="comment-author">${comment.user.firstname} ${comment.user.lastname} ${comment.isAuthor ? '(Auteur)' : '(Reviewer)'}</div>
+                    <p>${comment.content}</p>
+                    ${comment.lineNumber ? `<small>Ligne: ${comment.lineNumber}</small><br>` : ''}
+                    <div class="comment-time">${formattedDate}</div>
+                `;
+                
+                commentsContainer.appendChild(commentElement);
+            });
+        }
+        
+        function addNotification(notification) {
+            notifications.unshift(notification); // Ajouter au début du tableau
+            if (notifications.length > 30) {
+                notifications.pop(); // Garder au maximum 30 notifications
+            }
+            
+            unreadNotifications++;
+            updateNotificationCounter();
+            
+            // Mettre à jour l'affichage des notifications
+            renderNotifications();
+        }
+        
+        function updateNotificationCounter() {
+            const counter = document.getElementById('notificationCounter');
+            
+            if (unreadNotifications > 0) {
+                counter.textContent = unreadNotifications;
+                counter.style.display = 'block';
+            } else {
+                counter.style.display = 'none';
+            }
+        }
+        
+        function renderNotifications() {
+            const notificationsContainer = document.getElementById('notificationsList');
+            notificationsContainer.innerHTML = '';
+            
+            if (notifications.length === 0) {
+                notificationsContainer.innerHTML = '<div class="notification">Aucune notification.</div>';
+                return;
+            }
+            
+            notifications.forEach((notification, index) => {
+                const notificationElement = document.createElement('div');
+                notificationElement.className = 'notification';
+                
+                if (index < unreadNotifications) {
+                    notificationElement.classList.add('unread');
+                }
+                
+                let message = '';
+                let senderName = '';
+                let scriptInfo = '';
+                let commentPreview = '';
+                
+                if (notification.type === 'NEW_COMMENT') {
+                    // Pour l'auteur: notification d'un reviewer
+                    senderName = notification.reviewerName || 'Un reviewer';
+                    scriptInfo = notification.scriptTitle ? `"${notification.scriptTitle}"` : `#${notification.scriptId}`;
+                    
+                    message = `<strong>${senderName}</strong> vous a envoyé un commentaire concernant le script ${scriptInfo}`;
+                    
+                    if (notification.lineNumber) {
+                        message += ` (ligne ${notification.lineNumber})`;
+                    }
+                    
+                    if (notification.commentContent) {
+                        commentPreview = `<div class="comment-preview">"${notification.commentContent}"</div>`;
+                    }
+                    
+                    notificationElement.innerHTML = `
+                        <div class="notification-content">
+                            <div class="notification-message">${message}</div>
+                            ${commentPreview}
+                            <div class="notification-time">${formatTimestamp(notification.timestamp)}</div>
+                        </div>
+                    `;
+                    
+                    notificationElement.classList.add('notification-reviewer');
+                } 
+                else if (notification.type === 'AUTHOR_COMMENT') {
+                    // Pour les reviewers: notification de l'auteur
+                    senderName = notification.authorName || 'L\'auteur';
+                    scriptInfo = notification.scriptTitle ? `"${notification.scriptTitle}"` : `#${notification.scriptId}`;
+                    
+                    message = `<strong>${senderName}</strong> (l'auteur) vous a envoyé un commentaire concernant le script ${scriptInfo}`;
+                    
+                    if (notification.lineNumber) {
+                        message += ` (ligne ${notification.lineNumber})`;
+                    }
+                    
+                    if (notification.commentContent) {
+                        commentPreview = `<div class="comment-preview">"${notification.commentContent}"</div>`;
+                    }
+                    
+                    notificationElement.innerHTML = `
+                        <div class="notification-content">
+                            <div class="notification-message">${message}</div>
+                            ${commentPreview}
+                            <div class="notification-time">${formatTimestamp(notification.timestamp)}</div>
+                        </div>
+                    `;
+                    
+                    notificationElement.classList.add('notification-author');
+                }
+                else {
+                    // Autres types de notifications
+                    let title = notification.type === 'SUCCESS' ? 'Succès' : 
+                                notification.type === 'ERROR' ? 'Erreur' : 'Information';
+                    
+                    notificationElement.innerHTML = `
+                        <div class="notification-content">
+                            <div class="notification-title">${title}</div>
+                            <div class="notification-message">${notification.message || ''}</div>
+                            <div class="notification-time">${formatTimestamp(notification.timestamp)}</div>
+                        </div>
+                    `;
+                }
+                
+                notificationsContainer.appendChild(notificationElement);
+            });
+        }
+
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'à l\'instant';
+            
+            const date = new Date(timestamp);
+            return date.toLocaleString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function showToastNotification(notification) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast visible';
+            
+            let message = '';
+            let senderName = '';
+            let scriptInfo = '';
+            let commentPreview = '';
+            
+            // Suite de la fonction showToastNotification
+            if (notification.type === 'NEW_COMMENT') {
+                // Pour le reviewer: notification d'un autre reviewer
+                senderName = notification.reviewerName || 'Un reviewer';
+                scriptInfo = notification.scriptTitle ? `"${notification.scriptTitle}"` : `#${notification.scriptId}`;
+                
+                toast.classList.add('toast-facebook', 'toast-reviewer');
+                
+                if (notification.commentContent) {
+                    commentPreview = `<div class="comment-preview">${notification.commentContent}</div>`;
+                }
+                
+                toast.innerHTML = `
+                    <div class="profile-pic reviewer">${senderName.charAt(0)}</div>
+                    <div class="toast-content-fb">
+                        <div class="sender-name">${senderName}</div>
+                        <div class="toast-message">a commenté le script ${scriptInfo}</div>
+                        ${commentPreview}
+                        <div class="toast-time">${formatTimestamp(notification.timestamp)}</div>
+                    </div>
+                `;
+            } 
+            else if (notification.type === 'AUTHOR_COMMENT') {
+                // Pour les reviewers: notification de l'auteur
+                senderName = notification.authorName || 'L\'auteur';
+                scriptInfo = notification.scriptTitle ? `"${notification.scriptTitle}"` : `#${notification.scriptId}`;
+                
+                toast.classList.add('toast-facebook', 'toast-author');
+                
+                if (notification.commentContent) {
+                    commentPreview = `<div class="comment-preview">${notification.commentContent}</div>`;
+                }
+                
+                toast.innerHTML = `
+                    <div class="profile-pic author">${senderName.charAt(0)}</div>
+                    <div class="toast-content-fb">
+                        <div class="sender-name">${senderName} (Auteur)</div>
+                        <div class="toast-message">a commenté le script ${scriptInfo}</div>
+                        ${commentPreview}
+                        <div class="toast-time">${formatTimestamp(notification.timestamp)}</div>
+                    </div>
+                `;
+            }
+            else {
+                // Notifications standard (success, error, etc.)
+                let icon = notification.type === 'SUCCESS' ? '✓' : 
+                          notification.type === 'ERROR' ? '✗' : 'ℹ';
+                          
+                let bgColor = notification.type === 'SUCCESS' ? '#4CAF50' : 
+                             notification.type === 'ERROR' ? '#F44336' : '#2196F3';
+                
+                toast.classList.add('toast-simple');
+                
+                toast.innerHTML = `
+                    <div class="toast-icon" style="background-color: ${bgColor};">${icon}</div>
+                    <div class="toast-content">
+                        <div class="toast-title">${notification.type === 'SUCCESS' ? 'Succès' : 
+                                                notification.type === 'ERROR' ? 'Erreur' : 'Information'}</div>
+                        <div class="toast-message">${notification.message || ''}</div>
+                    </div>
+                `;
+            }
+            
+            toastContainer.appendChild(toast);
+            
+            // Animer l'apparition et la disparition
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    toastContainer.removeChild(toast);
+                }, 500);
+            }, 5000);
+            
+            // Créer une notification dans le panneau
+            if (!notification.timestamp) {
+                notification.timestamp = new Date().toISOString();
+            }
+            
+            // Ne pas ajouter les notifications système (SUCCESS/ERROR) aux notifications du panneau
+            if (notification.type !== 'SUCCESS' && notification.type !== 'ERROR') {
+                addNotification(notification);
+            }
+        }
+        
+        function sendComment() {
+            const commentText = document.getElementById('commentText').value;
+            const lineNumber = document.getElementById('lineNumber').value;
+            
+            if (!commentText) {
+                alert('Veuillez entrer un commentaire');
+                return;
+            }
+            
+            if (!stompClient || !stompClient.connected) {
+                alert('Veuillez vous connecter au serveur WebSocket d\'abord');
+                return;
+            }
+            
+            const comment = {
+                content: commentText,
+                lineNumber: lineNumber ? parseInt(lineNumber) : null
+            };
+            
+            console.log("Envoi du commentaire au serveur:", comment, "pour le script:", currentScriptId);
+            
+            // Utiliser HTTP fetch au lieu de WebSocket pour s'assurer de l'enregistrement en DB
+            fetch(`http://localhost:8080/api/comments?scriptId=${currentScriptId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(comment)
+            })
+            .then(response => {
+                console.log("Réponse du serveur:", response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Commentaire enregistré avec succès:", data);
+                // Vider le champ de texte
+                document.getElementById('commentText').value = '';
+                document.getElementById('lineNumber').value = '';
+                
+                // Afficher une notification de succès
+                showToastNotification({
+                    type: "SUCCESS",
+                    message: "Votre commentaire a été envoyé avec succès"
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors de l\'envoi du commentaire:', error);
+                
+                showToastNotification({
+                    type: "ERROR",
+                    message: `Erreur: ${error.message}`
+                });
+            });
+        }
+        
+        // Fonction pour afficher une notification de changement de statut
+        function showStatusChangeNotification(statusNotification) {
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-reviewer';
+            
+            const content = `
+                <div class="toast-facebook">
+                    <div class="profile-pic reviewer">S</div>
+                    <div class="toast-content-fb">
+                        <div class="sender-name">Mise à jour de statut</div>
+                        <div class="toast-message">${statusNotification.message}</div>
+                        <div class="toast-time">${new Date(statusNotification.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            toast.innerHTML = content;
+            toastContainer.appendChild(toast);
+            
+            // Animation d'entrée
+            setTimeout(() => toast.classList.add('visible'), 10);
+            
+            // Animation de sortie après 5 secondes
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

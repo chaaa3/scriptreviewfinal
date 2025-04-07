@@ -1,6 +1,6 @@
 package com.scriptreview.dto;
 
-import com.scriptreview.model.ScriptStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,16 +11,16 @@ import java.util.List;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class ScriptDto {
     private Long id;
     private String title;
     private String content;
     private UserDto author;
-    private ScriptStatus status;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<UserDto> assignedReviewers;
-    private List<CommentDto> comments;
+    private List<RevisionHistoryDto> revisionHistory;
 } 

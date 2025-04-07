@@ -9,7 +9,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+
+
 import com.scriptreview.dto.UserDto;
+
 import com.scriptreview.model.User;
 import com.scriptreview.repository.UserRepository;
 
@@ -24,6 +27,16 @@ public class UserService implements UserDetailsService {
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		return userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+	}
+
+	public User getUserEntityById(Long id) {
+		return userRepository.findById(id)
+			.orElseThrow(() -> new RuntimeException("User not found"));
+	}
+
+	public User getUserByEmail(String email) {
+		return userRepository.findByEmail(email)
+			.orElseThrow(() -> new RuntimeException("User not found"));
 	}
 
 	public UserDto createUser(User user) {
@@ -51,13 +64,34 @@ public class UserService implements UserDetailsService {
 
 		return convertToDto(userRepository.save(user));
 	}
+	public UserDto updateUserFirstname(Long id, User userDetails) {
+		User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
 
+		user.setFirstname(userDetails.getFirstname());
+		
+		return convertToDto(userRepository.save(user));
+	}
+	public UserDto updateUserLastname(Long id,User userDetails) {
+		User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+		user.setLastname(userDetails.getLastname());
+		return convertToDto(userRepository.save(user));
+	}
+	public UserDto updateUserEmail(Long id,User userDetails) {
+		User user=userRepository.findById(id).orElseThrow(() -> new RuntimeException(" User not found"));
+		user.setEmail(userDetails.getEmail());
+		return convertToDto(userRepository.save(user));
+	}
+	public UserDto updateUserRole(Long id,User userDetails) {
+		User user=userRepository.findById(id).orElseThrow(()->new RuntimeException(" User not found"));
+		user.setRole(userDetails.getRole());
+		return convertToDto(userRepository.save(user));
+	}
 	public void deleteUser(Long id) {
 		userRepository.deleteById(id);
 	}
 
 	private UserDto convertToDto(User user) {
 		return UserDto.builder().id(user.getId()).firstname(user.getFirstname()).lastname(user.getLastname())
-				.email(user.getEmail()).role(user.getRole()).build();
+				.email(user.getEmail()).role(user.getRole().name()).build();
 	}
 }

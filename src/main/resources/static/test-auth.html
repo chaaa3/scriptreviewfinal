@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès Sécurisé - Mon Application</title>
+    <!-- Import Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Réinitialisation de base et style global */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(120deg, #f0f4f8, #d9e2ec); /* Fond dégradé subtil */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        /* Conteneur principal de la carte */
+        .auth-card {
+            background-color: #ffffff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 420px; /* Largeur maximale du formulaire */
+            text-align: center;
+            transition: transform 0.3s ease; /* Effet subtil au survol */
+        }
+
+        /* Optionnel: léger effet de grossissement au survol */
+        /* .auth-card:hover {
+            transform: translateY(-5px);
+        } */
+
+        /* Titre du formulaire */
+        .auth-title {
+            font-size: 2em; /* 2em = 2 * font-size du parent (body) */
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50; /* Bleu foncé/gris */
+        }
+
+        .auth-subtitle {
+            font-size: 0.95em;
+            color: #7f8c8d; /* Gris clair */
+            margin-bottom: 30px;
+        }
+
+        /* Groupe de formulaire (label + input) */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left; /* Aligner labels à gauche */
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        /* Style des inputs et select */
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1em;
+            border: 1px solid #dcdcdc; /* Bordure subtile */
+            border-radius: 8px;
+            background-color: #f8f9fa; /* Fond très léger */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            font-family: inherit; /* Hériter la police du body */
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff; /* Couleur primaire au focus */
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15); /* Halo léger au focus */
+        }
+
+        /* Placeholder stylisé */
+        .form-control::placeholder {
+            color: #aaa;
+            opacity: 1; /* Firefox */
+        }
+
+        /* Bouton principal */
+        .btn-submit {
+            background: linear-gradient(90deg, #007bff, #0056b3); /* Dégradé pour le bouton */
+            color: white;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-top: 10px; /* Espace au-dessus du bouton */
+            transition: background 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(90deg, #0069d9, #004cae);
+            transform: translateY(-2px); /* Léger soulèvement au survol */
+        }
+
+        .btn-submit:active {
+            transform: translateY(0); /* Retour à la position initiale au clic */
+            box-shadow: 0 2px 10px rgba(0, 123, 255, 0.2);
+        }
+
+        /* Messages de résultat */
+        .result {
+            margin-top: 25px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            text-align: left;
+            word-wrap: break-word;
+            display: none; /* Caché par défaut */
+            border: 1px solid transparent;
+        }
+
+        .result.success {
+            background-color: #e6fffa; /* Fond vert très pâle */
+            color: #006442; /* Texte vert foncé */
+            border-color: #b3f2e4; /* Bordure verte pâle */
+            display: block; /* Afficher quand la classe est ajoutée */
+        }
+
+        .result.error {
+            background-color: #fff0f1; /* Fond rouge très pâle */
+            color: #a8202a; /* Texte rouge foncé */
+            border-color: #ffccd0; /* Bordure rouge pâle */
+            display: block; /* Afficher quand la classe est ajoutée */
+        }
+
+        /* Lien pour switcher entre login/register */
+        .switch-link {
+            margin-top: 25px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .switch-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .switch-link a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+         /* Style spécifique pour le select pour le faire ressembler aux inputs */
+        select.form-control {
+            appearance: none; /* Supprimer le style natif */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23555" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Flèche SVG personnalisée */
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 20px;
+            padding-right: 40px; /* Espace pour la flèche */
+        }
+
+         /* Pour cacher une section si nécessaire (ex: afficher login OU register) */
+         .hidden-section {
+             display: none;
+         }
+
+    </style>
+</head>
+<body>
+
+    <div class="auth-card" id="register-section">
+        <h2 class="auth-title">Créer un compte</h2>
+        <p class="auth-subtitle">Rejoignez notre plateforme dès aujourd'hui !</p>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="regFirstname">Prénom</label>
+                <input type="text" id="regFirstname" class="form-control" placeholder="Entrez votre prénom" required>
+            </div>
+            <div class="form-group">
+                <label for="regLastname">Nom</label>
+                <input type="text" id="regLastname" class="form-control" placeholder="Entrez votre nom" required>
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Adresse Email</label>
+                <input type="email" id="regEmail" class="form-control" placeholder="exemple@domaine.com" required>
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Mot de passe</label>
+                <input type="password" id="regPassword" class="form-control" placeholder="Choisissez un mot de passe sécurisé" required>
+            </div>
+            <div class="form-group">
+                <label for="regRole">Quel est votre rôle ?</label>
+                <select id="regRole" class="form-control" required>
+                    <option value="" disabled selected>-- Sélectionner un rôle --</option>
+                    <option value="AUTEUR">Auteur</option>
+                    <option value="REVIEWER">Reviewer</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="RESPONSABLE">Responsable</option>
+                    <!-- Ajoutez d'autres rôles si nécessaire -->
+                </select>
+            </div>
+            <button type="submit" class="btn-submit">S'inscrire</button>
+        </form>
+        <div id="registerResult" class="result"></div> <!-- Message de résultat -->
+         <p class="switch-link">Déjà un compte ? <a href="#" onclick="showLogin(event)">Connectez-vous</a></p>
+    </div>
+
+    <div class="auth-card hidden-section" id="login-section">
+        <h2 class="auth-title">Connexion</h2>
+        <p class="auth-subtitle">Heureux de vous revoir !</p>
+
+        <form id="loginForm">
+             <div class="form-group">
+                <label for="loginEmail">Adresse Email</label>
+                <input type="email" id="loginEmail" class="form-control" placeholder="exemple@domaine.com" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Mot de passe</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Entrez votre mot de passe" required>
+                <!-- Optionnel: Lien "Mot de passe oublié ?" -->
+                <!-- <a href="#" style="display: block; text-align: right; font-size: 0.85em; margin-top: 8px; color: #007bff; text-decoration: none;">Mot de passe oublié ?</a> -->
+            </div>
+            <button type="submit" class="btn-submit">Se connecter</button>
+        </form>
+        <div id="loginResult" class="result"></div> <!-- Message de résultat -->
+         <p class="switch-link">Pas encore de compte ? <a href="#" onclick="showRegister(event)">Inscrivez-vous</a></p>
+    </div>
+
+    <script>
+        const registerSection = document.getElementById('register-section');
+        const loginSection = document.getElementById('login-section');
+        const registerForm = document.getElementById('registerForm');
+        const registerResult = document.getElementById('registerResult');
+        const loginForm = document.getElementById('loginForm');
+        const loginResult = document.getElementById('loginResult');
+
+        // --- Fonctions pour afficher/cacher les sections ---
+        function showLogin(event) {
+            event.preventDefault();
+            registerSection.classList.add('hidden-section');
+            loginSection.classList.remove('hidden-section');
+        }
+
+        function showRegister(event) {
+            event.preventDefault();
+            loginSection.classList.add('hidden-section');
+            registerSection.classList.remove('hidden-section');
+        }
+
+
+        // --- Fonction pour afficher les résultats ---
+        function displayResult(element, message, isSuccess) {
+            // Nettoyer les anciennes classes et masquer d'abord
+            element.className = 'result'; // Réinitialise aux classes de base
+            element.textContent = '';
+            element.style.display = 'none';
+
+            // Appliquer les nouvelles classes et le message
+             // Léger délai pour que le navigateur prenne en compte le display:none avant display:block
+            setTimeout(() => {
+                 element.textContent = message;
+                 element.classList.add(isSuccess ? 'success' : 'error');
+                 // La classe 'success' ou 'error' contient déjà display: block dans le CSS
+            }, 50);
+        }
+
+        // --- Gestion de l'Inscription ---
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerResult.style.display = 'none'; // Cache le précédent résultat explicitement
+
+            const data = {
+                firstname: document.getElementById('regFirstname').value,
+                lastname: document.getElementById('regLastname').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value,
+                role: document.getElementById('regRole').value
+            };
+
+             // Validation simple côté client
+            if (!data.role) {
+                displayResult(registerResult, "Veuillez sélectionner un rôle.", false);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/register', { // Adaptez l'URL si nécessaire
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayResult(registerResult, `Inscription réussie ! Vous pouvez maintenant vous connecter.`, true);
+                    registerForm.reset();
+                    // Optionnel: Rediriger vers la page de connexion après un délai
+                    // setTimeout(() => showLogin(new Event('click')), 2000);
+                } else {
+                    const errorMessage = result.message || result.error || JSON.stringify(result);
+                    displayResult(registerResult, `Erreur ${response.status}: ${errorMessage}`, false);
+                }
+
+            } catch (error) {
+                console.error("Erreur lors de l'inscription:", error);
+                displayResult(registerResult, `Erreur réseau ou lors de l'envoi: ${error.message}`, false);
+            }
+        });
+
+        // --- Gestion de la Connexion ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginResult.style.display = 'none';
+
+            const data = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch('/api/auth/authenticate', { // Adaptez l'URL si nécessaire
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayResult(loginResult, `Connexion réussie ! Token reçu (voir console).`, true);
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('refreshToken', result.refreshToken);
+                    console.log("Token JWT stocké:", result.token);
+                    console.log("Refresh Token stocké:", result.refreshToken);
+                    loginForm.reset();
+                    // Optionnel: Rediriger vers un tableau de bord après connexion
+                    // window.location.href = '/dashboard'; // Changer l'URL cible
+                } else {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('refreshToken');
+                    const errorMessage = result.message || result.error || JSON.stringify(result);
+                    // Afficher un message générique pour ne pas indiquer si c'est l'email ou le mdp qui est faux
+                    displayResult(loginResult, `Erreur ${response.status}: Email ou mot de passe incorrect.`, false);
+                }
+
+            } catch (error) {
+                console.error("Erreur lors de la connexion:", error);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('refreshToken');
+                displayResult(loginResult, `Erreur réseau ou lors de l'envoi: ${error.message}`, false);
+            }
+        });
+
+         // Afficher le formulaire de login par défaut si l'utilisateur a peut-être déjà un compte
+         // Ou garder le register par défaut si c'est la première visite typique
+         // Par défaut, le register est visible et le login est caché par le CSS.
+
+    </script>
+
+</body>
+</html>

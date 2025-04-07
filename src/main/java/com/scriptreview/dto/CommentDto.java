@@ -9,12 +9,13 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class CommentDto {
     private Long id;
     private String content;
     private UserDto user;
+    private ScriptDto script;
     private LocalDateTime createdAt;
     private Integer lineNumber;
 } 

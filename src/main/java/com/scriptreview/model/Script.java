@@ -1,6 +1,7 @@
 package com.scriptreview.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +10,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Data
 @Builder
@@ -20,9 +23,9 @@ public class Script {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @NotNull
     private String title;
-    
+    @NotNull
     @Column(columnDefinition = "TEXT")
     private String content;
     
@@ -51,7 +54,9 @@ public class Script {
     
     @OneToMany(mappedBy = "script", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
-    
+    @OneToMany(mappedBy = "script", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties("script") // Ignorer la sérialisation de cette propriété
+    private List<RevisionHistory> revisionHistory = new ArrayList<>();
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -129,7 +134,8 @@ public class Script {
 	public List<Comment> getComments() {
 		return comments;
 	}
-
+	
+	
 	public void setComments(List<Comment> comments) {
 		this.comments = comments;
 	}

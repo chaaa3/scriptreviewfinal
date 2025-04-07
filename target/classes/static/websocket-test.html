@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Script Review Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .user-info {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .messages-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .author {
+            background-color: #e3f2fd;
+            margin-left: auto;
+            margin-right: 0;
+        }
+        .reviewer {
+            background-color: #f5f5f5;
+            margin-right: auto;
+            margin-left: 0;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .message-content {
+            word-wrap: break-word;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #f44336;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            <h2>Script Review Chat</h2>
+            <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="Enter your email">
+                <label for="scriptId">Script ID:</label>
+                <input type="number" id="scriptId" value="1">
+                <button onclick="connect()">Connect</button>
+                <button onclick="disconnect()">Disconnect</button>
+            </div>
+            <div id="roleInfo" class="error"></div>
+        </div>
+
+        <div class="messages-container" id="messages"></div>
+
+        <div class="input-container">
+            <input type="text" id="message" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentEmail = null;
+        let currentScript = null;
+
+        function connect() {
+            const email = document.getElementById('email').value;
+            const scriptId = document.getElementById('scriptId').value;
+            
+            if (!email) {
+                document.getElementById('roleInfo').textContent = 'Please enter an email';
+                return;
+            }
+
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            // Enable debug logging
+            stompClient.debug = function(str) {
+                console.log(str);
+                document.getElementById('roleInfo').textContent = str;
+            };
+
+            const headers = {
+                'login': email,
+                'passcode': 'password'  // Add your authentication mechanism here
+            };
+
+            stompClient.connect(headers, function(frame) {
+                console.log('Connected: ' + frame);
+                currentEmail = email;
+                currentScript = scriptId;
+                
+                // Subscribe to private messages for this script
+                const destination = `/user/queue/script.${scriptId}.messages`;
+                stompClient.subscribe(destination, function(message) {
+                    const messageData = JSON.parse(message.body);
+                    displayMessage(messageData);
+                });
+                
+                document.getElementById('roleInfo').textContent = `Connected as ${email}`;
+            }, function(error) {
+                console.error('Connection error:', error);
+                document.getElementById('roleInfo').textContent = 'Connection error: ' + error;
+            });
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                document.getElementById('roleInfo').textContent = 'Disconnected';
+                currentEmail = null;
+                currentScript = null;
+            }
+        }
+
+        function sendMessage() {
+            if (!stompClient || !currentEmail || !currentScript) {
+                alert('Please connect first');
+                return;
+            }
+
+            const messageInput = document.getElementById('message');
+            const content = messageInput.value;
+            
+            if (content.trim()) {
+                const message = {
+                    content: content,
+                    scriptId: currentScript,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    stompClient.send("/app/message.send", {}, JSON.stringify(message));
+                    messageInput.value = '';
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    document.getElementById('roleInfo').textContent = 'Error sending message: ' + error;
+                }
+            }
+        }
+
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.type ? message.type.toLowerCase() : ''}`;
+            
+            const timestamp = new Date(message.timestamp).toLocaleString();
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong>${message.senderName || message.senderId || 'Unknown'}</strong>
+                    <span>${timestamp}</span>
+                </div>
+                <div class="message-content">${message.content}</div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Handle Enter key in message input
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

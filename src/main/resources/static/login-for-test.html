@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obtenir Token JWT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f1f1f1;
+        }
+        .token-display {
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #e7f3e8;
+            border-left: 4px solid #4CAF50;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .user-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+        .actions {
+            margin-top: 20px;
+        }
+        
+        /* Animation de pulsation pour le badge de notification */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .pulse {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation avec icône de notification -->
+    <div style="background-color: #4267B2; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-radius: 5px;">
+        <div style="font-weight: bold; font-size: 18px;">Script Review Platform</div>
+        <div style="display: flex; align-items: center;">
+            <div class="notification-icon" style="position: relative; margin-left: 15px; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M12,22 C13.1,22 14,21.1 14,20 L10,20 C10,21.1 10.9,22 12,22 Z M18,16 L18,11 C18,7.93 16.36,5.36 13.5,4.68 L13.5,4 C13.5,3.17 12.83,2.5 12,2.5 C11.17,2.5 10.5,3.17 10.5,4 L10.5,4.68 C7.63,5.36 6,7.92 6,11 L6,16 L4,18 L4,19 L20,19 L20,18 L18,16 Z"></path>
+                </svg>
+                <span id="notification-badge" style="position: absolute; top: -8px; right: -8px; background-color: #FF3B30; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; display: none;">0</span>
+                
+                <!-- Panneau de notifications -->
+                <div id="notification-panel" style="display: none; position: absolute; top: 30px; right: 0; width: 350px; max-height: 450px; overflow-y: auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; color: #333;">
+                    <div style="background-color: #f8f8f8; padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #eee; border-radius: 8px 8px 0 0;">
+                        Notifications
+                    </div>
+                    <div id="notifications-list">
+                        <div style="padding: 15px; text-align: center; color: #888;">
+                            Aucune notification
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h1>Obtenir un Token JWT pour tester</h1>
+    
+    <div class="card">
+        <h2>Authentification</h2>
+        
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Entrez votre email">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" placeholder="Entrez votre mot de passe">
+        </div>
+        
+        <button id="loginBtn">Se connecter</button>
+    </div>
+    
+    <div id="result" style="display: none;">
+        <h2>Résultat de la connexion</h2>
+        <div id="tokenInfo"></div>
+        
+        <div class="actions">
+            <a href="/test-status-notification.html" target="_blank" id="testNotificationsBtn" style="display: none;">
+                <button>Tester les notifications de changement de statut</button>
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        // Éléments DOM
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const resultDiv = document.getElementById('result');
+        const tokenInfoDiv = document.getElementById('tokenInfo');
+        const testNotificationsBtn = document.getElementById('testNotificationsBtn');
+        
+        // Ajouter une option pour les sons de notification
+        document.querySelector('.notification-icon').insertAdjacentHTML('afterend', `
+            <div style="margin-left: 15px; display: flex; align-items: center; font-size: 14px;">
+                <input type="checkbox" id="soundEnabled" style="margin-right: 5px;" checked>
+                <label for="soundEnabled" style="color: white;">Sons</label>
+            </div>
+        `);
+        
+        // Événements
+        loginBtn.addEventListener('click', login);
+        
+        // Fonctions
+        function login() {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!email || !password) {
+                alert("Veuillez remplir tous les champs");
+                return;
+            }
+            
+            // Requête d'authentification
+            fetch('/api/auth/authenticate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Réponse d\'authentification:', data);
+                
+                // Afficher le token
+                resultDiv.style.display = 'block';
+                
+                // Décoder le payload du token
+                const userInfo = parseJwt(data.token);
+                console.log('Payload décodé:', userInfo);
+                
+                // Selon le code de AuthenticationService.java, userId est ajouté comme claim
+                // et le sub est l'email de l'utilisateur
+                const userId = userInfo.userId;
+                const userEmail = userInfo.sub;
+                
+                // Le rôle n'est pas explicitement ajouté au token dans votre application
+                // nous pouvons chercher s'il existe dans les autorités ou autres champs
+                let userRole = '';
+                if (userInfo.authorities) {
+                    userRole = userInfo.authorities.replace('ROLE_', '');
+                } else if (userInfo.role) {
+                    userRole = userInfo.role;
+                } else if (userInfo.roles) {
+                    userRole = userInfo.roles;
+                }
+                
+                tokenInfoDiv.innerHTML = `
+                    <div class="token-display">
+                        <p><strong>Token JWT:</strong></p>
+                        <div>${data.token}</div>
+                    </div>
+                    
+                    <div class="user-info">
+                        <p><strong>Informations utilisateur (décodées du token):</strong></p>
+                        <p>Payload complet: <pre>${JSON.stringify(userInfo, null, 2)}</pre></p>
+                        <p>ID utilisateur: <span id="userId">${userId}</span></p>
+                        <p>Email: ${userEmail}</p>
+                        <p>Rôle: ${userRole}</p>
+                    </div>
+                `;
+                
+                // Activer le bouton de test
+                testNotificationsBtn.style.display = 'block';
+                
+                // Stocker le token et l'ID pour la page de test
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('userId', userId);
+            })
+            .catch(error => {
+                console.error('Erreur d\'authentification:', error);
+                resultDiv.style.display = 'block';
+                tokenInfoDiv.innerHTML = `<p style="color: red;">Erreur: ${error.message}</p>`;
+            });
+        }
+        
+        // Fonction pour décoder le payload d'un token JWT
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Erreur lors du parsing du JWT:', e);
+                return {};
+            }
+        }
+
+        // Gestion des notifications
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationIcon = document.querySelector('.notification-icon');
+            const notificationPanel = document.getElementById('notification-panel');
+            const notificationBadge = document.getElementById('notification-badge');
+            
+            // Simuler des notifications (à remplacer par vos vraies données)
+            let unreadCount = 0;
+            let notifications = [];
+            
+            // Gestionnaire de clic sur l'icône de notification
+            notificationIcon.addEventListener('click', function(event) {
+                event.stopPropagation();
+                
+                if (notificationPanel.style.display === 'block') {
+                    notificationPanel.style.display = 'none';
+                } else {
+                    notificationPanel.style.display = 'block';
+                    // Marquer comme lu
+                    if (unreadCount > 0) {
+                        unreadCount = 0;
+                        updateNotificationBadge();
+                        renderNotifications();
+                    }
+                }
+            });
+            
+            // Fermer le panneau en cliquant ailleurs
+            document.addEventListener('click', function(event) {
+                if (event.target !== notificationIcon && !notificationPanel.contains(event.target)) {
+                    notificationPanel.style.display = 'none';
+                }
+            });
+            
+            // Fonction de mise à jour du badge
+            function updateNotificationBadge() {
+                if (unreadCount > 0) {
+                    notificationBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                    notificationBadge.style.display = 'flex';
+                } else {
+                    notificationBadge.style.display = 'none';
+                }
+            }
+            
+            // Fonction de rendu des notifications
+            function renderNotifications() {
+                const listElement = document.getElementById('notifications-list');
+                listElement.innerHTML = '';
+                
+                if (notifications.length === 0) {
+                    listElement.innerHTML = `
+                        <div style="padding: 15px; text-align: center; color: #888;">
+                            Aucune notification
+                        </div>
+                    `;
+                    return;
+                }
+                
+                notifications.forEach((notification, index) => {
+                    const notifElement = document.createElement('div');
+                    notifElement.style.cssText = 'padding: 15px; border-bottom: 1px solid #eee; transition: background-color 0.2s; position: relative;';
+                    
+                    if (index < unreadCount) {
+                        notifElement.style.backgroundColor = '#e6f3ff';
+                        // Barre latérale bleue pour non lu
+                        const blueLine = document.createElement('div');
+                        blueLine.style.cssText = 'position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #1877f2;';
+                        notifElement.appendChild(blueLine);
+                    }
+                    
+                    notifElement.innerHTML += `
+                        <div style="font-weight: bold; margin-bottom: 5px; color: #1877f2;">
+                            ${notification.title || 'Notification'}
+                            <span style="display: inline-block; background-color: #1877f2; color: white; border-radius: 3px; padding: 2px 6px; font-size: 11px; margin-left: 5px;">
+                                ${notification.type || 'INFO'}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 8px; line-height: 1.4;">
+                            ${notification.message || 'Nouvelle notification'}
+                        </div>
+                        <div style="font-size: 0.8em; color: #888;">
+                            ${new Date(notification.timestamp).toLocaleTimeString()}
+                        </div>
+                    `;
+                    
+                    // Si la notification concerne un script, rendre la notification cliquable
+                    if (notification.scriptId) {
+                        notifElement.style.cursor = 'pointer';
+                        notifElement.title = "Cliquez pour voir l'historique de révision";
+                        notifElement.addEventListener('click', () => {
+                            openScriptHistory(notification.scriptId);
+                            notificationPanel.style.display = 'none';
+                        });
+                    }
+                    
+                    listElement.appendChild(notifElement);
+                });
+            }
+            
+            // Fonction pour ouvrir l'historique d'un script dans un nouvel onglet
+            function openScriptHistory(scriptId) {
+                if (!scriptId) return;
+                
+                // Ouvrir la page de test des notifications avec le script ID
+                const testPage = `/test-status-notification.html?scriptId=${scriptId}`;
+                window.open(testPage, '_blank');
+                
+                // Stocker les informations pour la page de test
+                localStorage.setItem('openHistoryForScript', scriptId);
+            }
+            
+            // Fonction pour ajouter une notification
+            window.addNotification = function(notification) {
+                notifications.unshift(notification); // Ajouter au début
+                if (notifications.length > 30) notifications.pop(); // Limiter à 30
+                
+                unreadCount++;
+                updateNotificationBadge();
+                renderNotifications();
+                
+                // Animation du badge
+                notificationBadge.classList.add('pulse');
+                setTimeout(() => {
+                    notificationBadge.classList.remove('pulse');
+                }, 1000);
+                
+                // Jouer le son de notification UNIQUEMENT pour les changements de statut ou les commentaires
+                const notifType = notification.type || '';
+                const isStatusChange = notifType.includes('STATUS');
+                const isCommentNotif = notifType.includes('COMMENT') || notification.message?.includes('commenté');
+                
+                // Ne pas jouer de son pour les notifications de type INFO ou de bienvenue
+                const isInfoNotif = notifType === 'INFO' || notification.title === 'Bienvenue';
+                
+                if ((isStatusChange || isCommentNotif) && !isInfoNotif) {
+                    playNotificationSound();
+                }
+            }
+            
+            // Fonction pour jouer le son de notification
+            function playNotificationSound() {
+                // Vérifier si les sons sont activés
+                const soundEnabled = document.getElementById('soundEnabled').checked;
+                if (!soundEnabled) return;
+                
+                const sound = document.getElementById('notification-sound');
+                
+                // Réinitialiser le son avant de le jouer (pour permettre de rejouer le son)
+                sound.pause();
+                sound.currentTime = 0;
+                
+                // Jouer le son
+                sound.play().catch(e => {
+                    console.warn("Impossible de jouer le son de notification:", e);
+                    // Les navigateurs peuvent bloquer la lecture automatique sans interaction utilisateur
+                });
+            }
+            
+            // Simuler une notification après 3 secondes
+            setTimeout(() => {
+                addNotification({
+                    title: 'Bienvenue',
+                    message: 'Connectez-vous pour voir vos notifications',
+                    type: 'INFO',
+                    timestamp: new Date()
+                });
+            }, 3000);
+        });
+    </script>
+    
+    <!-- Élément audio pour le son de notification -->
+    <audio id="notification-sound" preload="auto">
+        <source src="https://cdn.pixabay.com/download/audio/2021/10/04/audio_00fa5569ff.mp3?filename=notification-sound-7062.mp3" type="audio/mp3">
+        <!-- Son alternatif si le premier ne fonctionne pas -->
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=interface-124464.mp3" type="audio/mp3">
+    </audio>
+</body>
+</html> 

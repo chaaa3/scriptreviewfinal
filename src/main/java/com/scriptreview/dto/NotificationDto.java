@@ -1,6 +1,5 @@
 package com.scriptreview.dto;
 
-import com.scriptreview.model.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,14 +9,13 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class NotificationDto {
     private Long id;
-    private UserDto user;
     private String message;
-    private LocalDateTime createdAt;
-    private boolean read;
-    private ScriptDto script;
-    private NotificationType type;
+    private String type;
+    private LocalDateTime timestamp;
+    private Long scriptId;
+    private boolean isRead;
 } 

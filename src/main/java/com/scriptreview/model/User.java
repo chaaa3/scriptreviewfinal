@@ -1,6 +1,8 @@
 package com.scriptreview.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,11 +24,14 @@ public class User implements UserDetails {
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @NotNull
     private String firstname;
+    @NotNull
     private String lastname;
     
     @Column(unique = true)
+    @NotNull(message = "L'email ne peut pas etre vide")
+    @Email(message="L'email doit etre valide")
     private String email;
     
     private String password;
@@ -37,7 +42,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_"+role.name()));
     }
 
     @Override
