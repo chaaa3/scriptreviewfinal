@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Review - Tableau de bord</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #00d68f;
+            --secondary-color: #2d3436;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --danger-color: #d63031;
+            --info-color: #0984e3;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .sidebar {
+            background-color: white;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .nav-link {
+            color: var(--secondary-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: #f1f1f1;
+            color: var(--primary-color);
+        }
+
+        .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon.draft { background-color: #e3f2fd; color: #1976d2; }
+        .stat-icon.review { background-color: #fff3e0; color: #f57c00; }
+        .stat-icon.approved { background-color: #e8f5e9; color: #388e3c; }
+        .stat-icon.rejected { background-color: #ffebee; color: #d32f2f; }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+
+        .recent-activity {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .activity-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f1f1f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar p-3">
+        <div class="d-flex align-items-center mb-4">
+            <i class="bi bi-code-square fs-3 me-2" style="color: var(--primary-color);"></i>
+            <h4 class="m-0">Script Review</h4>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="#">
+                <i class="bi bi-speedometer2 me-2"></i>
+                Tableau de bord
+            </a>
+            <a class="nav-link" href="#">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Mes Scripts
+            </a>
+            <a class="nav-link" href="#">
+                <i class="bi bi-search me-2"></i>
+                Scripts à revoir
+            </a>
+            <a class="nav-link" href="#">
+                <i class="bi bi-clock-history me-2"></i>
+                Historique
+            </a>
+            <a class="nav-link position-relative" href="#">
+                <i class="bi bi-bell me-2"></i>
+                Notifications
+                <span class="notification-badge">3</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Tableau de bord</h2>
+            <div class="d-flex align-items-center">
+                <div class="user-avatar me-2">JD</div>
+                <span>John Doe</span>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon draft">
+                        <i class="bi bi-file-earmark"></i>
+                    </div>
+                    <h3>12</h3>
+                    <p class="text-muted mb-0">Scripts en brouillon</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon review">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <h3>8</h3>
+                    <p class="text-muted mb-0">En cours de revue</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon approved">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h3>24</h3>
+                    <p class="text-muted mb-0">Scripts approuvés</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon rejected">
+                        <i class="bi bi-x-circle"></i>
+                    </div>
+                    <h3>3</h3>
+                    <p class="text-muted mb-0">Scripts rejetés</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="recent-activity">
+                    <h5 class="mb-3">Activité récente</h5>
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">Script de test 1</span>
+                                <span class="status-badge" style="background-color: #e8f5e9; color: #388e3c;">Approuvé</span>
+                            </div>
+                            <small class="text-muted">Il y a 2 heures</small>
+                        </div>
+                        <p class="mb-0 text-muted">Modifié par Jane Smith</p>
+                    </div>
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">Script de test 2</span>
+                                <span class="status-badge" style="background-color: #fff3e0; color: #f57c00;">En revue</span>
+                            </div>
+                            <small class="text-muted">Il y a 4 heures</small>
+                        </div>
+                        <p class="mb-0 text-muted">Modifié par Michael Brown</p>
+                    </div>
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold">Script de test 3</span>
+                                <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2;">Brouillon</span>
+                            </div>
+                            <small class="text-muted">Il y a 6 heures</small>
+                        </div>
+                        <p class="mb-0 text-muted">Créé par John Doe</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="recent-activity">
+                    <h5 class="mb-3">Notifications</h5>
+                    <div class="activity-item">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-bell-fill text-warning me-2"></i>
+                            <div>
+                                <p class="mb-0">Nouveau script à revoir</p>
+                                <small class="text-muted">Il y a 30 minutes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <div>
+                                <p class="mb-0">Votre script a été approuvé</p>
+                                <small class="text-muted">Il y a 2 heures</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-chat-dots-fill text-info me-2"></i>
+                            <div>
+                                <p class="mb-0">Nouveau commentaire sur votre script</p>
+                                <small class="text-muted">Il y a 3 heures</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

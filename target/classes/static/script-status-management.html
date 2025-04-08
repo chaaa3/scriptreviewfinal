@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Statuts - Script Review</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background-color: white;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            padding-left: 2.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: white;
+        }
+
+        .search-bar::before {
+            content: "🔍";
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .scripts-table {
+            width: 100%;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+
+        .scripts-table th,
+        .scripts-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .scripts-table th {
+            font-weight: 500;
+            color: #666;
+            background-color: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-draft {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-review {
+            background-color: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-approved {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-rejected {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+
+        .status-select {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .status-select:focus {
+            outline: none;
+            border-color: #00d68f;
+        }
+
+        .update-button {
+            background-color: #00d68f;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+
+        .update-button:hover {
+            background-color: #00bf80;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            border-color: #00d68f;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+
+        .notification-badge {
+            position: relative;
+        }
+
+        .notification-badge::after {
+            content: "3";
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff3d71;
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="#" class="logo">Script Review</a>
+        <div class="nav-links">
+            <a href="#">Accueil</a>
+            <a href="#">Mes Scripts</a>
+            <a href="#">Historique</a>
+            <a href="#" class="notification-badge">🔔</a>
+            <div class="user-avatar">👤</div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Gestion des Statuts</h1>
+            <div class="search-bar">
+                <input type="text" placeholder="Rechercher un script...">
+            </div>
+        </div>
+
+        <table class="scripts-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Auteur</th>
+                    <th>Statut Actuel</th>
+                    <th>Nouveau Statut</th>
+                    <th>Commentaire</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Script de test 1</td>
+                    <td>John Doe</td>
+                    <td><span class="status-badge status-draft">Brouillon</span></td>
+                    <td>
+                        <select class="status-select">
+                            <option value="draft">Brouillon</option>
+                            <option value="review">En revue</option>
+                            <option value="approved">Approuvé</option>
+                            <option value="rejected">Rejeté</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="comment-input" placeholder="Ajouter un commentaire...">
+                    </td>
+                    <td>
+                        <button class="update-button">Mettre à jour</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Script de test 2</td>
+                    <td>Jane Smith</td>
+                    <td><span class="status-badge status-review">En revue</span></td>
+                    <td>
+                        <select class="status-select">
+                            <option value="draft">Brouillon</option>
+                            <option value="review">En revue</option>
+                            <option value="approved">Approuvé</option>
+                            <option value="rejected">Rejeté</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="comment-input" placeholder="Ajouter un commentaire...">
+                    </td>
+                    <td>
+                        <button class="update-button">Mettre à jour</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Script de test 3</td>
+                    <td>Michael Brown</td>
+                    <td><span class="status-badge status-approved">Approuvé</span></td>
+                    <td>
+                        <select class="status-select">
+                            <option value="draft">Brouillon</option>
+                            <option value="review">En revue</option>
+                            <option value="approved">Approuvé</option>
+                            <option value="rejected">Rejeté</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="comment-input" placeholder="Ajouter un commentaire...">
+                    </td>
+                    <td>
+                        <button class="update-button">Mettre à jour</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html> 

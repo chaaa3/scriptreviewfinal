@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Review - Gestion des Scripts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #00d68f;
+            --secondary-color: #2d3436;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --danger-color: #d63031;
+            --info-color: #0984e3;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .sidebar {
+            background-color: white;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .nav-link {
+            color: var(--secondary-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: #f1f1f1;
+            color: var(--primary-color);
+        }
+
+        .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .filters {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: var(--secondary-color);
+        }
+
+        .script-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .script-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-draft { background-color: #e3f2fd; color: #1976d2; }
+        .status-review { background-color: #fff3e0; color: #f57c00; }
+        .status-approved { background-color: #e8f5e9; color: #388e3c; }
+        .status-rejected { background-color: #ffebee; color: #d32f2f; }
+
+        .action-button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-button.edit {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        .action-button.delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .action-button:hover {
+            opacity: 0.9;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f1f1f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding-left: 35px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar p-3">
+        <div class="d-flex align-items-center mb-4">
+            <i class="bi bi-code-square fs-3 me-2" style="color: var(--primary-color);"></i>
+            <h4 class="m-0">Script Review</h4>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="#">
+                <i class="bi bi-speedometer2 me-2"></i>
+                Tableau de bord
+            </a>
+            <a class="nav-link active" href="#">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Mes Scripts
+            </a>
+            <a class="nav-link" href="#">
+                <i class="bi bi-search me-2"></i>
+                Scripts à revoir
+            </a>
+            <a class="nav-link" href="#">
+                <i class="bi bi-clock-history me-2"></i>
+                Historique
+            </a>
+            <a class="nav-link position-relative" href="#">
+                <i class="bi bi-bell me-2"></i>
+                Notifications
+                <span class="notification-badge">3</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Mes Scripts</h2>
+            <div class="d-flex align-items-center">
+                <div class="user-avatar me-2">JD</div>
+                <span>John Doe</span>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="filter-group">
+                        <label class="filter-label">Rechercher</label>
+                        <div class="search-box">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="form-control" placeholder="Rechercher un script...">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="filter-group">
+                        <label class="filter-label">Statut</label>
+                        <select class="form-select">
+                            <option value="">Tous les statuts</option>
+                            <option value="draft">Brouillon</option>
+                            <option value="review">En revue</option>
+                            <option value="approved">Approuvé</option>
+                            <option value="rejected">Rejeté</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="filter-group">
+                        <label class="filter-label">Date</label>
+                        <select class="form-select">
+                            <option value="">Toutes les dates</option>
+                            <option value="today">Aujourd'hui</option>
+                            <option value="week">Cette semaine</option>
+                            <option value="month">Ce mois</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="script-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="mb-0">Script de test 1</h5>
+                        <span class="status-badge status-draft">Brouillon</span>
+                    </div>
+                    <p class="text-muted mb-3">Description du script de test 1. Ce script est en cours de développement...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">JD</div>
+                            <div>
+                                <p class="mb-0">John Doe</p>
+                                <small class="text-muted">Créé le 15/03/2024</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="action-button edit me-2">Modifier</button>
+                            <button class="action-button delete">Supprimer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="script-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="mb-0">Script de test 2</h5>
+                        <span class="status-badge status-review">En revue</span>
+                    </div>
+                    <p class="text-muted mb-3">Description du script de test 2. Ce script est en cours de revue...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">JS</div>
+                            <div>
+                                <p class="mb-0">Jane Smith</p>
+                                <small class="text-muted">Créé le 14/03/2024</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="action-button edit me-2">Modifier</button>
+                            <button class="action-button delete">Supprimer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="script-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="mb-0">Script de test 3</h5>
+                        <span class="status-badge status-approved">Approuvé</span>
+                    </div>
+                    <p class="text-muted mb-3">Description du script de test 3. Ce script a été approuvé...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">MB</div>
+                            <div>
+                                <p class="mb-0">Michael Brown</p>
+                                <small class="text-muted">Créé le 13/03/2024</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="action-button edit me-2">Modifier</button>
+                            <button class="action-button delete">Supprimer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="script-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="mb-0">Script de test 4</h5>
+                        <span class="status-badge status-rejected">Rejeté</span>
+                    </div>
+                    <p class="text-muted mb-3">Description du script de test 4. Ce script a été rejeté...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">AL</div>
+                            <div>
+                                <p class="mb-0">Ava Lee</p>
+                                <small class="text-muted">Créé le 12/03/2024</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="action-button edit me-2">Modifier</button>
+                            <button class="action-button delete">Supprimer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
